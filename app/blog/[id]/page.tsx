@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import CommentSection from "@/components/CommentSection";
 
 export default function PostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -43,7 +42,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
       <p className="text-gray-600 mt-2">{post.content}</p>
       
   
-      <CommentSection postId={post.id.toString()} />
 
   
 
