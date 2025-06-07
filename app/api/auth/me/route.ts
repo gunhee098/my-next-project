@@ -1,28 +1,35 @@
-// 📂 app/api/auth/me/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { NextRequest, NextResponse } from "next/server"; // Next.jsのAPIルートのためのモジュール
+import jwt from "jsonwebtoken"; // JWT (JSON Web Token) を扱うためのライブラリ
 
+// GETリクエストハンドラー
+// リクエストヘッダーから認証トークンを取得し、そのトークンを検証してユーザーIDを返します。
 export async function GET(req: NextRequest) {
   try {
-    // 🔥 1. Authorization 헤더에서 토큰 가져오기
+    // ⚡ 1. Authorizationヘッダーからトークンを取得
     const authHeader = req.headers.get("authorization");
+    // Authorizationヘッダーが存在しない場合
     if (!authHeader) {
-      return NextResponse.json({ error: "토큰이 없습니다!" }, { status: 401 });
+      return NextResponse.json({ error: "トークンがありません！" }, { status: 401 }); // 💡 日本語に
     }
 
-    const token = authHeader.split(" ")[1]; // "Bearer 토큰값"에서 토큰값만 추출
+    // "Bearer トークン値" の形式からトークン値のみを抽出
+    const token = authHeader.split(" ")[1];
 
-    // 🔥 2. 토큰 검증
+    // ⚡ 2. JWTトークンの検証
+    // 環境変数JWT_SECRETを使用してトークンを検証します。
+    // 開発環境用の"default_secret"は、本番環境では必ず強力な秘密鍵に置き換えるべきです。
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "default_secret") as { id: number; email: string };
 
+    // トークンが有効にデコードされない場合（検証失敗など）
     if (!decoded) {
-      return NextResponse.json({ error: "유효하지 않은 토큰입니다!" }, { status: 401 });
+      return NextResponse.json({ error: "無効なトークンです！" }, { status: 401 }); // 💡 日本語に
     }
 
-    // 🔥 3. 유저 ID 반환
+    // ⚡ 3. デコードされたトークンからユーザーIDを抽出し、返却
     return NextResponse.json({ userId: decoded.id }, { status: 200 });
   } catch (error) {
-    console.error("🚨 토큰 검증 실패:", error);
-    return NextResponse.json({ error: "서버 오류 발생!" }, { status: 500 });
+    // トークン検証中にエラーが発生した場合（例: トークンが無効または期限切れ）
+    console.error("🚨 トークン検証失敗:", error); // コンソールエラーメッセージを日本語に
+    return NextResponse.json({ error: "サーバーエラーが発生しました！" }, { status: 500 }); // 💡 日本語に
   }
 }

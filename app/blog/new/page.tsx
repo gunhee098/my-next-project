@@ -1,50 +1,69 @@
-"use client";
+"use client"; // このファイルがクライアントサイドで実行されることを宣言
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useLang } from "@/components/LanguageProvider"; // LanguageProvider import
-import en from "@/locales/en.json"; // alias 경로 사용
-import ja from "@/locales/ja.json"; // alias 경로 사용
+import { useRouter } from "next/navigation"; // ルーティング管理のためのuseRouterをインポート
+import { useLang } from "@/components/LanguageProvider"; // LanguageProviderから言語コンテキストフックをインポート (エイリアスパス使用)
+import en from "@/locales/en.json"; // 英語の辞書ファイルをインポート (エイリアスパス使用)
+import ja from "@/locales/ja.json"; // 日本語の辞書ファイルをインポート (エイリアスパス使用)
 
+// 新規投稿ページコンポーネント
+// ユーザーが新しいブログ投稿を作成するためのインターフェースを提供します。
 export default function NewPostPage() {
-  const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const { lang, setLang } = useLang(); // 언어 상태와 setter 가져오기
-  const dict = lang === "ja" ? ja : en; // 현재 언어에 맞는 사전 선택
+  const router = useRouter(); // Next.jsのルーターフックを初期化
 
+  // 投稿タイトルを管理するstate
+  const [title, setTitle] = useState("");
+  // 投稿内容を管理するstate
+  const [content, setContent] = useState("");
+
+  // 言語コンテキストから現在の言語 (lang) と設定関数 (setLang) を取得
+  const { lang, setLang } = useLang();
+  // 現在の言語に基づいて使用する辞書オブジェクトを選択
+  const dict = lang === "ja" ? ja : en;
+
+  // 投稿作成処理を行う非同期ハンドラー関数
   const handleCreatePost = async () => {
     try {
+      // ローカルストレージから認証トークンを取得
       const token = localStorage.getItem("token");
-      if (!token) throw new Error(dict.needLogin); // 번역된 메시지 사용
+      // トークンが存在しない場合、エラーをスロー (多言語対応メッセージを使用)
+      if (!token) throw new Error(dict.needLogin);
 
+      // 新しい投稿データをAPIエンドポイントにPOSTリクエストとして送信
       const res = await fetch("/api/posts", {
-        method: "POST",
+        method: "POST", // HTTPメソッドはPOST
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json", // リクエストボディの形式はJSON
+          Authorization: `Bearer ${token}`, // 認証ヘッダーにJWTトークンを含める
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content }), // タイトルと内容をJSON形式で送信
       });
 
+      // レスポンスが正常でない場合
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || dict.postFail); // 번역된 메시지 사용
+        // サーバーからのエラーメッセージ、またはデフォルトの投稿失敗メッセージを使用
+        throw new Error(errorData.error || dict.postFail);
       }
 
+      // 投稿成功後、フォームフィールドをクリア
       setTitle("");
       setContent("");
-      router.push("/blog"); // 🔥 작성 후 블로그 목록으로 이동
+      // 投稿一覧ページへリダイレクト
+      router.push("/blog");
     } catch (error) {
-      console.error(dict.postFail, error); // 번역된 메시지 사용
+      // エラー発生時の処理 (多言語対応メッセージを使用し、エラー詳細もコンソールに出力)
+      console.error(dict.postFail, error);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 relative"> {/* relative 추가 */}
-      {/* 🔤 언어 전환 버튼 - 오른쪽 상단 고정 느낌 */}
-      <div className="absolute top-4 right-4"> {/* 위치 조정 */}
+    // ページ全体のコンテナ。中央寄せ、パディング、相対位置指定
+    <div className="max-w-2xl mx-auto p-4 relative">
+      {/* 言語切り替えボタン - 右上固定 */}
+      <div className="absolute top-4 right-4">
         <div className="inline-flex shadow rounded overflow-hidden">
+          {/* 英語切り替えボタン */}
           <button
             onClick={() => setLang("en")}
             className={`px-3 py-1 font-medium ${
@@ -53,6 +72,7 @@ export default function NewPostPage() {
           >
             EN
           </button>
+          {/* 日本語切り替えボタン */}
           <button
             onClick={() => setLang("ja")}
             className={`px-3 py-1 font-medium ${
@@ -64,26 +84,30 @@ export default function NewPostPage() {
         </div>
       </div>
 
-      <h1 className="text-2xl font-bold mb-4 text-center">{dict.newPostTitle}</h1> {/* 번역 */}
+      {/* ページタイトル (辞書から取得) */}
+      <h1 className="text-2xl font-bold mb-4 text-center">{dict.newPostTitle}</h1>
 
+      {/* タイトル入力フィールド (プレースホルダーも辞書から取得) */}
       <input
         type="text"
-        placeholder={dict.titlePlaceholder} // 번역
+        placeholder={dict.titlePlaceholder}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="border p-2 w-full"
       />
+      {/* 内容入力テキストエリア (プレースホルダーも辞書から取得) */}
       <textarea
-        placeholder={dict.contentPlaceholder} // 번역
+        placeholder={dict.contentPlaceholder}
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="border p-2 w-full mt-2 h-40" // 높이 지정
+        className="border p-2 w-full mt-2 h-40" // 高さ指定
       />
+      {/* 投稿作成ボタン (テキストも辞書から取得) */}
       <button
         onClick={handleCreatePost}
         className="bg-blue-500 text-white px-4 py-2 mt-2 rounded hover:bg-blue-600"
       >
-        {dict.createPost} {/* 번역 */}
+        {dict.createPost}
       </button>
     </div>
   );
