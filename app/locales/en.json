@@ -18,7 +18,7 @@
   "oldest": "Oldest",
   "author": "Author",
   "date": "Date",
-  "postFail": "Failed to create post",
+  "postFail": "Failed to create post.",
   "newPostTitle": "Create New Post",
   "titlePlaceholder": "Title",
   "contentPlaceholder": "Content",
@@ -37,7 +37,12 @@
   "alreadyAccountPrompt": "Already have an account?",
   "loginLink": "Login",
   "loginSuccess": "Login successful!",
-  "registerSuccess": "🎉 Congratulations! Registration successful! Please log in."
-  ,
-  "registerFail": "Registration failed!"
+  "registerSuccess": "🎉 Congratulations! Registration successful! Please log in.",
+  "registerFail": "Registration failed!",
+  "fetchPostFail": "Failed to fetch post.",
+  "editPostTitle": "Edit Post",
+  "loading": "Loading...",
+  "updateSuccess": "Post updated successfully!",
+  "updateFail": "Failed to update post.",
+  "updatePost": "Update Post"  
 }

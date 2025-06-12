@@ -3,12 +3,23 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// 投稿データのインターフェース定義を更新：image_urlを追加
+interface Post {
+  id: number;
+  title: string;
+  content: string;
+  userid: number; // 💡 追加: ユーザーID (Post テーブルの userid カラムと一致)
+  image_url?: string; // 💡 追加: 画像のURL (オプションプロパティとして定義)
+  // 必要に応じて他のプロパティも追加（例: created_at, updated_at など）
+}
+
 // 投稿詳細ページコンポーネント
 // 特定のIDを持つ単一の投稿を表示し、編集・削除機能へのリンクを提供します。
 export default function PostPage({ params }: { params: { id: string } }) {
   const router = useRouter(); // Next.jsルーターフックを初期化
   // 投稿データを管理するstate。初期値はnullです。
-  const [post, setPost] = useState<{ id: number; title: string; content: string } | null>(null);
+  // 💡 変更点: Post インターフェースを使用するように型を更新
+  const [post, setPost] = useState<Post | null>(null);
   // ロード中状態を管理するstate。データの読み込み中にUIフィードバックを提供します。
   const [loading, setLoading] = useState(true);
   // エラー状態を管理するstate。データの読み込み失敗時にエラーメッセージを表示します。
@@ -96,7 +107,21 @@ export default function PostPage({ params }: { params: { id: string } }) {
   return (
     <div className="max-w-2xl mx-auto p-4">
       <h1 className="text-3xl font-bold">{post.title}</h1>
-      <p className="text-gray-600 mt-2">{post.content}</p>
+      
+      {/* 💡 追加: image_url が存在する場合に画像を表示 */}
+      {post.image_url && (
+        <div className="mt-4">
+          <img
+            src={post.image_url}
+            alt={post.title || "投稿画像"}
+            className="w-full h-auto rounded-lg shadow-md object-cover"
+            style={{ maxWidth: '100%', maxHeight: '400px' }} // 最大サイズを制限（必要に応じて調整）
+          />
+        </div>
+      )}
+
+      {/* 💡 変更点: content に whitespace-pre-wrap クラスを追加して改行を保持 */}
+      <p className="text-gray-600 mt-2 whitespace-pre-wrap">{post.content}</p>
 
       <div className="mt-4 flex gap-2">
         {/* 投稿編集ページへのボタン */}
