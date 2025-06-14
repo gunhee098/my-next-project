@@ -1,142 +1,234 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import { useLang } from "@/components/LanguageProvider";
+import en from "@/locales/en.json";
+import ja from "@/locales/ja.json";
+import { jwtDecode } from "jwt-decode"; // 💡 추가: jwtDecode 임포트
+import { formatDistanceToNow, format } from "date-fns"; // 💡 추가: 날짜 포맷 임포트
+import { ko } from "date-fns/locale"; // 💡 추가: 한국어 로케일 임포트
 
-// 投稿データのインターフェース定義を更新：image_urlを追加
+// 投稿データのインターフェース定義 (Postインターフェースを最新化)
 interface Post {
   id: number;
   title: string;
   content: string;
-  userid: number; // 💡 追加: ユーザーID (Post テーブルの userid カラムと一致)
-  image_url?: string; // 💡 追加: 画像のURL (オプションプロパティとして定義)
-  // 必要に応じて他のプロパティも追加（例: created_at, updated_at など）
+  userid: number;
+  image_url?: string;
+  author?: {
+    name: string;
+  };
+  created_at: string; // 💡 created_at으로 통일
+  username: string; // 💡 username 추가 (GET 응답에서 받을 필드)
+}
+
+// JWT 토큰 디코딩 인터페이스 (재사용)
+interface DecodedToken {
+  id: number;
+  email: string;
+  name: string;
+  iat: number;
+  exp: number;
 }
 
 // 投稿詳細ページコンポーネント
-// 特定のIDを持つ単一の投稿を表示し、編集・削除機能へのリンクを提供します。
-export default function PostPage({ params }: { params: { id: string } }) {
-  const router = useRouter(); // Next.jsルーターフックを初期化
-  // 投稿データを管理するstate。初期値はnullです。
-  // 💡 変更点: Post インターフェースを使用するように型を更新
-  const [post, setPost] = useState<Post | null>(null);
-  // ロード中状態を管理するstate。データの読み込み中にUIフィードバックを提供します。
+export default function PostDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const postId = params.id as string;
+
+  const [post, setPost] = useState<Post | null>(null); // 💡 타입 명확화
   const [loading, setLoading] = useState(true);
-  // エラー状態を管理するstate。データの読み込み失敗時にエラーメッセージを表示します。
   const [error, setError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null); // 💡 추가: 로그인된 유저 ID
 
-  // コンポーネントがマウントされた時、またはparams.idが変更された時に投稿データを取得
+  const { lang, setLang } = useLang();
+  const dict = lang === "ja" ? ja : en;
+
   useEffect(() => {
-    const fetchPost = async () => {
-      setLoading(true); // データ読み込み開始
-      setError(null); // エラー状態をリセット
-
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
       try {
-        // APIから指定されたIDの投稿データを取得
-        const res = await fetch(`/api/posts/${params.id}`);
-        if (!res.ok) {
-          // HTTPエラー応答の場合
-          const errorData = await res.json();
-          setError(errorData.error || "投稿が見つかりません。"); // サーバーからのエラーメッセージ、またはデフォルトメッセージ
-          console.error("投稿の読み込みに失敗しました:", errorData);
-          router.replace("/blog"); // 投稿がない場合はブログ一覧ページへリダイレクト
-          return;
-        }
-        setPost(await res.json()); // 取得したデータをstateに設定
-      } catch (err) {
-        // ネットワークエラーなど、リクエスト自体が失敗した場合
-        console.error("投稿の読み込み中にネットワークエラーが発生しました:", err);
-        setError("投稿の読み込み中にエラーが発生しました。");
-        router.replace("/blog"); // エラー発生時はブログ一覧ページへリダイレクト
-      } finally {
-        setLoading(false); // データ読み込み完了
+        const decoded: DecodedToken = jwtDecode(token);
+        setCurrentUserId(decoded.id); // 💡 로그인된 유저 ID 설정
+      } catch (e) {
+        console.error("Failed to decode token", e);
+        setIsLoggedIn(false);
+        setCurrentUserId(null);
       }
-    };
+    } else {
+      setIsLoggedIn(false);
+      setCurrentUserId(null);
+    }
 
-    fetchPost(); // 投稿データ取得関数を呼び出す
-  }, [params.id, router]); // params.idとrouterが変更された場合にeffectを再実行
+    async function fetchPost() {
+      try {
+        const res = await fetch(`/api/posts/${postId}`);
+        if (!res.ok) {
+          throw new Error(dict.fetchPostFail);
+        }
+        const data: Post = await res.json(); // 💡 타입 명확화
+        setPost(data);
+        console.log("✅ 投稿の読み込みが完了しました:", data);
+      } catch (err: any) {
+        console.error("投稿の読み込み中にエラーが発生しました:", err);
+        setError(err.message || dict.fetchPostFail);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  // 投稿削除処理ハンドラー
+    if (postId) {
+      fetchPost();
+    }
+  }, [postId, dict]);
+
   const handleDelete = async () => {
-    // ユーザーに削除確認を求める
-    if (!confirm("本当に削除しますか？")) return;
-
-    const token = localStorage.getItem("token"); // ローカルストレージからJWTトークンを取得
-    if (!token) {
-      alert("ログインが必要です！"); // トークンがない場合は警告
-      router.push("/auth/login"); // ログインページへリダイレクト
+    if (!confirm(dict.confirmDelete)) {
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
     try {
-      // APIエンドポイントにDELETEリクエストを送信して投稿を削除
-      const res = await fetch(`/api/posts/${params.id}`, {
-        method: "DELETE", // HTTPメソッドはDELETE
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error(dict.needLogin);
+      }
+
+      // 💡 DELETE 요청 시 id를 URL 파라미터로 보냄 (더 안정적)
+      const res = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
         headers: {
-          "Content-Type": "application/json", // リクエストボディの形式はJSON
-          "Authorization": `Bearer ${token}` // JWTトークンをAuthorizationヘッダーに含める
+          "Content-Type": "application/json", // 💡 Content-Type 추가
+          Authorization: `Bearer ${token}`,
         },
-        // DELETEリクエストボディにIDを含める (サーバー側のAPI要件による)
-        body: JSON.stringify({ id: parseInt(params.id) })
+        // body: JSON.stringify({ id: postId }), // 💡 body 제거 (URL 파라미터로 보내므로)
       });
 
       if (res.ok) {
-        alert("削除されました。"); // 削除成功メッセージ
-        router.push("/blog"); // 削除後、ブログ一覧ページへリダイレクト
+        alert("投稿が正常に削除されました！");
+        router.push("/blog");
       } else {
-        const errorData = await res.json(); // サーバーからのエラー応答をJSONとしてパース
-        // サーバーからのエラーメッセージがある場合はそれを使用し、ない場合は一般的なメッセージを表示
-        alert(`削除失敗: ${errorData.error || '不明なエラー'}`);
-        console.error("投稿の削除に失敗しました:", errorData);
+        const errorData = await res.json();
+        throw new Error(errorData.error || dict.deleteFail);
       }
-    } catch (err) {
-      console.error("投稿の削除中にネットワークエラーが発生しました:", err);
-      alert("削除中にネットワークエラーが発生しました。");
+    } catch (err: any) {
+      console.error("投稿の削除中にエラーが発生しました:", err);
+      setError(err.message || dict.deleteFail);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 投稿読み込み中の表示
-  if (loading) return <p>投稿を読み込み中...</p>;
-  // エラー発生時の表示
-  if (error) return <p>エラー: {error}</p>;
-  // 投稿データが見つからない場合の表示 (loading/errorがfalseでpostがnullの場合)
-  if (!post) return <p>投稿が見つかりません。</p>;
+  // 💡 추가: 날짜 포맷 함수
+  const formatCreatedAt = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
 
-  console.log("✅ 投稿データ:", post); // 投稿データをコンソールにログ出力
+    if (diff < 1000 * 60 * 60 * 24) {
+      return formatDistanceToNow(date, { addSuffix: true, locale: ko });
+    }
+
+    return format(date, "yyyy.MM.dd");
+  };
+
+
+  if (loading) {
+    return <div className="text-center py-8">{dict.loading}</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center py-8">{error}</div>;
+  }
+
+  if (!post) {
+    return <div className="text-center py-8">{dict.fetchPostFail}</div>;
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-3xl font-bold">{post.title}</h1>
-      
-      {/* 💡 追加: image_url が存在する場合に画像を表示 */}
+    <div className="max-w-4xl mx-auto p-4 relative">
+      {/* 言語切り替えボタン - 右上固定 */}
+      <div className="absolute top-4 right-4">
+        <div className="inline-flex shadow rounded overflow-hidden">
+          <button
+            onClick={() => setLang("en")}
+            className={`px-3 py-1 font-medium ${
+              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+            }`}
+          >
+            EN
+          </button>
+          <button
+            onClick={() => setLang("ja")}
+            className={`px-3 py-1 font-medium ${
+              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+            }`}
+          >
+            JP
+          </button>
+        </div>
+      </div>
+
+      {/* 投稿詳細表示 */}
+      <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
+      {/* 著者と日付情報の安全な表示 */}
+      <p className="text-gray-600 text-sm mb-6">
+        {dict.author}: {post.username || '不明'} | {dict.date}: {post.created_at ? formatCreatedAt(post.created_at) : '不明な日付'} {/* 💡 수정: username 사용, formatCreatedAt 적용 */}
+      </p>
+
+      {/* 画像表示 */}
       {post.image_url && (
-        <div className="mt-4">
+        <div className="mb-6">
           <img
             src={post.image_url}
-            alt={post.title || "投稿画像"}
-            className="w-full h-auto rounded-lg shadow-md object-cover"
-            style={{ maxWidth: '100%', maxHeight: '400px' }} // 最大サイズを制限（必要に応じて調整）
+            alt={post.title}
+            className="w-full h-auto max-h-[500px] object-contain rounded-lg shadow-md"
           />
         </div>
       )}
 
-      {/* 💡 変更点: content に whitespace-pre-wrap クラスを追加して改行を保持 */}
-      <p className="text-gray-600 mt-2 whitespace-pre-wrap">{post.content}</p>
+      {/* コンテンツをHTMLとして安全にレンダリング、改行を<br />に変換 */}
+      <div className="prose lg:prose-lg mb-8" dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}>
+      </div>
 
-      <div className="mt-4 flex gap-2">
-        {/* 投稿編集ページへのボタン */}
+      {/* 編集・削除ボタン (ログイン中かつ投稿者のみ表示) */}
+      {isLoggedIn && currentUserId === post.userid && ( // 💡 수정: 로그인 유저와 게시글 유저 ID 비교
+        <div className="flex space-x-4 mb-8">
+          <button
+            onClick={() => router.push(`/blog/${postId}/edit`)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            {dict.edit}
+          </button>
+          <button
+            onClick={handleDelete}
+            className="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            {dict.delete}
+          </button>
+        </div>
+      )}
+
+      {/* コメントセクション (TODO: 後で実装) */}
+      <div className="mt-8 border-t pt-4">
+        <h2 className="text-xl font-bold mb-4">{dict.comment}</h2>
+        <p className="text-gray-500">{dict.comment} 機能はまだ実装されていません。</p>
+      </div>
+
+      {/* 投稿一覧へ戻るボタン */}
+      <div className="mt-8 text-center">
         <button
-          onClick={() => router.push(`/blog/${params.id}/edit`)}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          onClick={() => router.push("/blog")}
+          className="text-blue-500 hover:underline"
         >
-          修正
-        </button>
-        {/* 投稿削除ボタン */}
-        <button
-          onClick={handleDelete}
-          className="bg-red-500 text-white px-4 py-2 rounded"
-        >
-          削除
+          &larr; 投稿一覧へ戻る
         </button>
       </div>
     </div>

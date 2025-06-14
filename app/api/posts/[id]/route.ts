@@ -48,6 +48,9 @@ export async function PUT(req: NextRequest, context: { params: { id: string } })
 
 // ⚡ [GET] 投稿の取得
 // 特定のIDを持つ単一の投稿を取得します。
+// app/api/posts/[id]/route.ts 파일의 GET 핸들러 부분
+// ⚡ [GET] 投稿の取得
+// 特定のIDを持つ単一の投稿を取得します。
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
   const id = context.params?.id;
 
@@ -58,8 +61,22 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
   }
 
   try {
-    // 💡 変更点: SELECT 文に image_url カラムを追加
-    const result = await pool.query("SELECT id, userid, title, content, created_at, updated_at, image_url FROM posts WHERE id = $1", [parseInt(id, 10)]);
+    // 💡 수정: username을 가져오기 위해 "User" 테이블 JOIN 및 image_url 포함
+    const result = await pool.query(
+      `SELECT 
+         posts.id, 
+         posts.userid, 
+         posts.title, 
+         posts.content, 
+         posts.created_at, 
+         posts.updated_at, 
+         posts.image_url,
+         "User".name AS username -- 💡 추가: 유저 이름을 username으로 가져옴
+       FROM posts
+       JOIN "User" ON posts.userid = "User".id
+       WHERE posts.id = $1`,
+      [parseInt(id, 10)]
+    );
 
     if (result.rowCount === 0) {
       return NextResponse.json({ error: "投稿が見つかりませんでした。" }, { status: 404 });

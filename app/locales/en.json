@@ -44,5 +44,7 @@
   "loading": "Loading...",
   "updateSuccess": "Post updated successfully!",
   "updateFail": "Failed to update post.",
-  "updatePost": "Update Post"  
+  "updatePost": "Update Post" ,
+  "noPosts": "There are no posts yet."
+ 
 }
