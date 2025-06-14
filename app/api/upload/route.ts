@@ -4,7 +4,7 @@ import { v2 as cloudinary } from 'cloudinary'; // Cloudinary SDK를 임포트
 
 // Cloudinary 설정 (환경 변수 사용)
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, // .env.local 에서 NEXT_PUBLIC_ 접두사가 있어도 서버에서 사용 가능
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // .env.local 에서 NEXT_PUBLIC_ 접두사가 있어도 서버에서 사용 가능
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
@@ -13,7 +13,7 @@ cloudinary.config({
 // クライアントから受け取った画像をCloudinaryにアップロードし、そのURLを返します。
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData(); // マルチパート/フォームデータを解析
+    const formData = await req.formData(); // マルチパート/フォームデータを解析ㅜ
     const file = formData.get('file'); // 'file'이라는 이름으로 전송된 파일을 가져옴
 
     // 파일이 없는 경우 에러 처리
