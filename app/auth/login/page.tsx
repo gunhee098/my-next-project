@@ -1,112 +1,121 @@
-"use client"; // このファイルがクライアントサイドで実行されることを宣言
+// 📂 app/login/page.tsx
+"use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation"; // ルーティング管理のためのuseRouterをインポート
-import { useLang } from "@/components/LanguageProvider"; // LanguageProviderから言語コンテキストフックをインポート (エイリアスパス使用)
-import en from "@/locales/en.json"; // 英語の辞書ファイルをインポート (エイリアスパス使用)
-import ja from "@/locales/ja.json"; // 日本語の辞書ファイルをインポート (エイリアスパス使用)
+import { useRouter } from "next/navigation";
+import { useLang } from "@/components/LanguageProvider"; // 言語プロバイダーをインポート
 
-// ログインページコンポーネント
-// ユーザーがログインするためのフォームを提供します。
-// コンポーネント名をHomeからLoginPageに変更し、より明確にしました。
+import { useTheme } from "@/components/ThemeProvider"; // テーマプロバイダーからuseThemeフックをインポート
+import ThemeToggleButton from "@/components/ThemeToggleButton"; // テーマ切り替えボタンコンポーネントをインポート
+
+import en from "@/locales/en.json"; // 英語ロケールデータ
+import ja from "@/locales/ja.json"; // 日本語ロケールデータ
+
+/**
+ * ログインページコンポーネント
+ * ユーザーの認証処理と、言語・テーマ切り替え機能を提供します。
+ * @returns React.FC
+ */
 export default function LoginPage() {
-  // メールアドレスを管理するstate
   const [email, setEmail] = useState("");
-  // パスワードを管理するstate
   const [password, setPassword] = useState("");
-  const router = useRouter(); // Next.jsのルーターフックを初期化
+  const router = useRouter(); // Next.jsルーターフック
 
-  // 言語コンテキストから現在の言語 (lang) と設定関数 (setLang) を取得
-  const { lang, setLang } = useLang();
-  // 現在の言語に基づいて使用する辞書オブジェクトを選択
-  const dict = lang === "ja" ? ja : en;
+  const { lang, setLang } = useLang(); // 言語状態と設定関数を取得
+  const dict = lang === "ja" ? ja : en; // 現在の言語に応じた辞書データを設定
 
-  // ログイン処理を行う非同期ハンドラー関数
+  const { theme } = useTheme(); // 現在のテーマ状態を取得 (light/dark/undefined)
+
+  /**
+   * ログイン処理ハンドラー
+   * @param e フォームイベントオブジェクト
+   */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); // デフォルトのフォーム送信動作を防止
 
     try {
-      // APIエンドポイントにログインリクエストを送信
       const res = await fetch("/api/auth/", {
-        method: "POST", // HTTPメソッドはPOST
-        headers: { "Content-Type": "application/json" }, // リクエストボディの形式はJSON
-        body: JSON.stringify({ type: "login", email, password }), // ログインタイプ、メール、パスワードをJSON形式で送信
-        credentials: "include", // クッキーや認証ヘッダーをリクエストに含める設定
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "login", email, password }),
+        credentials: "include", // クッキーなどの認証情報をリクエストに含める
       });
 
-      // サーバーからの応答をJSON形式で解析
-      const data = await res.json();
+      const data = await res.json(); // サーバーからのJSONレスポンスを解析
 
-      // レスポンスが成功ステータス (res.ok) の場合
       if (res.ok) {
-        localStorage.setItem("token", data.token); // 受け取ったトークンをローカルストレージに保存
+        localStorage.setItem("token", data.token); // 認証トークンをローカルストレージに保存
         router.push("/blog"); // ログイン成功後、ブログページへリダイレクト
       } else {
-        // レスポンスがエラーの場合、サーバーからのエラーメッセージまたはデフォルトのログイン失敗メッセージを表示
-        alert(data.error || dict.loginFail);
+        alert(data.error || dict.loginFail); // ログイン失敗メッセージを表示
       }
     } catch (error) {
-      // ネットワークエラーなど、リクエスト自体が失敗した場合
-      alert(dict.serverError);
+      alert(dict.serverError); // サーバーエラーメッセージを表示
     }
   };
 
   return (
-    // ページ全体のコンテナ。中央寄せ、背景色、相対位置指定
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 relative">
-      {/* 言語切り替えボタン - 右上固定 */}
-      <div className="absolute top-4 right-4">
+    // 最上位のコンテナ。テーマ状態に応じて`dark`クラスを適用し、Tailwindのダークモードユーティリティを有効にする
+    <div className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'dark' : ''} bg-gray-100 dark:bg-gray-900 relative`}>
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        {/* 言語切り替えボタン */}
         <div className="inline-flex shadow rounded overflow-hidden">
-          {/* 英語切り替えボタン */}
           <button
             onClick={() => setLang("en")}
             className={`px-3 py-1 font-medium ${
-              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+              lang === "en"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
             }`}
           >
             EN
           </button>
-          {/* 日本語切り替えボタン */}
           <button
             onClick={() => setLang("ja")}
             className={`px-3 py-1 font-medium ${
-              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+              lang === "ja"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
             }`}
           >
             JP
           </button>
         </div>
+        {/* ダークモード切り替えボタンコンポーネント */}
+        <ThemeToggleButton />
       </div>
 
-      {/* ログインフォームのコンテナ */}
-      <div className="bg-white p-8 rounded-xl shadow-lg w-96">
-        {/* ログインフォームのタイトル (辞書から取得) */}
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">{dict.loginTitle}</h2>
-        {/* ログインフォーム */}
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-96">
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">
+          {dict.loginTitle}
+        </h2>
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            {/* メールアドレス入力フィールド (プレースホルダーも辞書から取得) */}
             <input
               type="email"
               placeholder={dict.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
-              required // 必須入力
+              // 入力フィールドのスタイル: ダークモードでもテキストが視認できるように設定
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              required
             />
           </div>
           <div>
-            {/* パスワード入力フィールド (プレースホルダーも辞書から取得) */}
             <input
               type="password"
               placeholder={dict.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
-              required // 必須入力
+              // 入力フィールドのスタイル: ダークモードでもテキストが視認できるように設定
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              required
             />
           </div>
-          {/* ログインボタン (テキストも辞書から取得) */}
           <button
             type="submit"
             className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg shadow-md transition"
@@ -114,10 +123,12 @@ export default function LoginPage() {
             {dict.loginButton}
           </button>
         </form>
-        {/* アカウントがない場合のプロンプトと登録リンク (テキストも辞書から取得) */}
-        <p className="text-center mt-4 text-gray-600">
+        <p className="text-center mt-4 text-gray-600 dark:text-gray-300">
           {dict.noAccountPrompt}{" "}
-          <a href="/auth/register" className="text-blue-500 font-bold hover:underline">
+          <a
+            href="/auth/register"
+            className="text-blue-500 font-bold hover:underline"
+          >
             {dict.registerLink}
           </a>
         </p>
