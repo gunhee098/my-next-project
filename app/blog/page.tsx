@@ -1,13 +1,14 @@
+// 📂 app/blog/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react"; // useCallback 추가
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { formatDistanceToNow, format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { useLang } from "@/components/LanguageProvider"; // 꼭 상대 경로 아닌 alias로 import
-import en from "@/locales/en.json"; // 💡 수정: 상대 경로에서 alias로 변경
-import ja from "@/locales/ja.json"; // 💡 수정: 상대 경로에서 alias로 변경
+import { useLang } from "@/components/LanguageProvider";
+import en from "@/locales/en.json";
+import ja from "@/locales/ja.json";
 
 
 interface Post {
@@ -17,7 +18,7 @@ interface Post {
   userid: number;
   created_at: string;
   username: string;
-  image_url?: string; // 💡 추가: 이미지 URL 필드
+  image_url?: string;
 }
 
 interface DecodedToken {
@@ -40,22 +41,43 @@ export default function BlogPage() {
   const { lang, setLang } = useLang();
   const dict = lang === "ja" ? ja : en;
 
-  // 💡 수정: fetchPosts를 useCallback으로 래핑하여 의존성 배열에 포함 가능하게 함
+  // fetchPosts 함수를 useCallback으로 래핑하고, router를 의존성 배열에 추가
   const fetchPosts = useCallback(async (keyword = "") => {
     try {
-      // 💡 수정: 백엔드 API에 검색, 정렬 파라미터 전달하도록 수정 (고객님 원래 코드는 검색만)
       const queryParams = new URLSearchParams();
       if (keyword) {
         queryParams.append("search", encodeURIComponent(keyword));
       }
-      if (sortOrder) { // sortOrder가 변경될 때마다 fetchPosts가 재실행되도록
+      if (sortOrder) {
         queryParams.append("orderBy", sortOrder);
       }
-      // TODO: 백엔드에서 사용자 필터링을 지원한다면 selectedAuthorId도 추가 가능
 
       const url = `/api/posts?${queryParams.toString()}`;
 
-      const res = await fetch(url, { cache: "no-store" });
+      // 인증 토큰을 Authorization 헤더에 포함
+      const token = localStorage.getItem("token");
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: headers // Authorization 헤더 추가
+      });
+
+      // 💡 추가/수정: API 응답이 401(Unauthorized) 또는 403(Forbidden)일 경우 로그인 페이지로 리다이렉트
+      if (res.status === 401 || res.status === 403) {
+        console.error("API 인증 실패: 토큰이 없거나 유효하지 않습니다.");
+        localStorage.removeItem("token"); // 유효하지 않은 토큰 삭제
+        setIsLoggedIn(false);
+        setUserId(null);
+        setUserEmail(null);
+        setUserName(null);
+        router.push("/"); // 로그인 페이지로 리다이렉트
+        return; // 추가 처리 없이 함수 종료
+      }
+
       if (!res.ok) throw new Error("서버 응답 실패");
 
       const data: Post[] = await res.json();
@@ -63,40 +85,64 @@ export default function BlogPage() {
     } catch (error) {
       console.error("게시글 불러오기 실패:", error);
     }
-  }, [sortOrder]); // 💡 수정: sortOrder가 변경될 때마다 fetchPosts가 재실행되도록
+  }, [sortOrder, router]); // 💡 router를 의존성 배열에 추가
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (token) {
       try {
         const decoded: DecodedToken = jwtDecode(token);
+        const currentTime = Date.now() / 1000; // 현재 시간을 초 단위로
+
+        // 💡 추가: 토큰 만료 시간 확인
+        if (decoded.exp < currentTime) {
+          console.warn("토큰이 만료되었습니다. 로그아웃 처리합니다.");
+          localStorage.removeItem("token");
+          setIsLoggedIn(false);
+          setUserId(null);
+          setUserEmail(null);
+          setUserName(null);
+          router.push("/"); // 💡 추가: 로그인 페이지로 리다이렉트
+          return; // 추가 처리 없이 함수 종료
+        }
+
         setIsLoggedIn(true);
         setUserId(decoded.id);
         setUserEmail(decoded.email);
         setUserName(decoded.name);
       } catch (err) {
         console.error("토큰 디코딩 오류:", err);
-        setIsLoggedIn(false); // 토큰 오류시 로그인 상태 해제
+        setIsLoggedIn(false);
         setUserId(null);
         setUserEmail(null);
         setUserName(null);
+        router.push("/"); // 💡 추가: 토큰 오류 시 로그인 페이지로 리다이렉트
+        return; // 추가 처리 없이 함수 종료
       }
     } else {
+      // 💡 추가: 토큰이 없는 경우에도 로그인 페이지로 리다이렉트
       setIsLoggedIn(false);
       setUserId(null);
       setUserEmail(null);
       setUserName(null);
+      router.push("/"); // 💡 추가: 로그인 페이지로 리다이렉트
+      return; // 추가 처리 없이 함수 종료
     }
 
-    fetchPosts(search); // 초기 로딩 시 검색어와 정렬 순서 적용
-  }, [fetchPosts, search]); // 💡 수정: search가 변경될 때도 fetchPosts 재실행 (검색 버튼 없이 입력 즉시)
+    fetchPosts(search);
+  }, [fetchPosts, search, router]); // 💡 router를 의존성 배열에 추가
 
   const handleDeletePost = async (id: number) => {
     if (!confirm(dict.confirmDelete)) return;
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error(dict.needLogin);
+      if (!token) {
+        // 💡 추가: 토큰이 없는 경우 로그인 페이지로 리다이렉트 (useEffect에서도 처리되지만 예방 차원)
+        router.push("/");
+        return;
+      }
 
       const res = await fetch(`/api/posts/${id}`, {
         method: "DELETE",
@@ -106,11 +152,18 @@ export default function BlogPage() {
       });
 
       if (!res.ok) {
+        // 💡 추가: 삭제 API가 인증 실패를 반환한 경우 리다이렉트
+        if (res.status === 401 || res.status === 403) {
+          console.error("삭제 API 인증 실패: 토큰이 없거나 유효하지 않습니다.");
+          localStorage.removeItem("token");
+          router.push("/");
+          return;
+        }
         const errorData = await res.json();
         throw new Error(errorData.error || dict.deleteFail);
       }
 
-      fetchPosts(search); // 삭제 후 현재 검색/정렬 상태 유지하며 다시 불러오기
+      fetchPosts(search);
     } catch (error) {
       console.error("삭제 실패:", error);
     }
@@ -121,7 +174,7 @@ export default function BlogPage() {
     setIsLoggedIn(false);
     setUserId(null);
     setUserEmail(null);
-    setUserName(null); // userName도 초기화
+    setUserName(null);
     router.push("/");
   };
 
@@ -136,13 +189,6 @@ export default function BlogPage() {
 
     return format(date, "yyyy.MM.dd");
   };
-
-  // 💡 삭제: 클라이언트 측 정렬 로직 (API에서 정렬해서 가져오므로 필요 없음)
-  // const sortedPosts = [...(posts || [])].sort((a, b) =>
-  //   sortOrder === "latest"
-  //     ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  //     : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  // );
 
   return (
     <div className="flex min-h-screen">
@@ -184,7 +230,7 @@ export default function BlogPage() {
 
         <h2 className="text-2xl font-bold text-center mb-6">{dict.title}</h2>
 
-        {isLoggedIn && userName && ( // userName 사용
+        {isLoggedIn && userName && (
           <p className="text-center text-gray-700 mb-4">
             {dict.welcome} {userName}님!
           </p>
@@ -209,12 +255,10 @@ export default function BlogPage() {
             onChange={(e) => {
               const keyword = e.target.value;
               setSearch(keyword);
-              // 💡 수정: 검색 버튼을 누르지 않아도 바로 검색 적용 (API 호출)
-              // if (keyword === "") fetchPosts(""); // 빈 문자열일 때도 다시 불러오기
             }}
           />
           <button
-            onClick={() => fetchPosts(search)} // 💡 수정: 검색 버튼 클릭 시 fetchPosts 호출
+            onClick={() => fetchPosts(search)}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
           >
             {dict.search}
@@ -224,7 +268,7 @@ export default function BlogPage() {
             <button
               onClick={() => {
                 setSearch("");
-                fetchPosts(""); // 💡 수정: 검색어 초기화 후 fetchPosts 호출
+                fetchPosts("");
               }}
               className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
             >
@@ -252,10 +296,10 @@ export default function BlogPage() {
         </div>
 
         <ul className="mt-6 space-y-4">
-          {posts.length === 0 ? ( // 💡 수정: sortedPosts 대신 posts.length로 체크
+          {posts.length === 0 ? (
             <p className="text-center text-gray-500">{dict.noPosts}</p>
           ) : (
-            posts.map((post) => ( // 💡 수정: sortedPosts 대신 posts 사용
+            posts.map((post) => ( // 'posts' 배열을 순회하며 각 'post'에 대해 렌더링. 이 부분은 문법적으로 올바름
               <li key={post.id} className="border p-4 rounded shadow flex flex-col md:flex-row items-start md:items-center">
                 <div className="flex-grow">
                   {/* 게시글 제목 클릭 시 상세 페이지로 이동 */}
@@ -265,7 +309,7 @@ export default function BlogPage() {
                   >
                     {post.title}
                   </h3>
-                  <p className="text-gray-600 mb-2 line-clamp-2">{post.content.split('\n')[0]}</p> {/* 미리보기 */}
+                  <p className="text-gray-600 mb-2 line-clamp-2">{post.content.split('\n')[0]}</p>
                   <p className="text-sm text-gray-500">
                     {dict.author}: {post.username} ・ {dict.date}: {formatCreatedAt(post.created_at)}
                   </p>
@@ -287,7 +331,7 @@ export default function BlogPage() {
                   <div className="mt-2 flex gap-2 md:ml-4">
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // li 클릭 이벤트 전파 방지
+                        e.stopPropagation();
                         router.push(`/blog/${post.id}/edit`);
                       }}
                       className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
@@ -296,7 +340,7 @@ export default function BlogPage() {
                     </button>
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // li 클릭 이벤트 전파 방지
+                        e.stopPropagation();
                         handleDeletePost(post.id);
                       }}
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
