@@ -1,13 +1,18 @@
+// 📂 app/blog/new/page.tsx
 "use client"; // このファイルがクライアントサイドで実行されることを宣言
 
 import { useState } from "react";
 import { useRouter } from "next/navigation"; // ルーティング管理のためのuseRouterをインポート
 import { useLang } from "@/components/LanguageProvider"; // LanguageProviderから言語コンテキストフックをインポート (エイリアスパス使用)
+import { useTheme } from "@/components/ThemeProvider"; // 💡 追加: ThemeProviderからテーマコンテキストフックをインポート
 import en from "@/locales/en.json"; // 英語の辞書ファイルをインポート (エイリアスパス使用)
 import ja from "@/locales/ja.json"; // 日本語の辞書ファイルをインポート (エイリアスパス使用)
 
-// 新規投稿ページコンポーネント
-// ユーザーが新しいブログ投稿を作成するためのインターフェースを提供します。
+/**
+ * 新規投稿ページコンポーネント
+ * ユーザーが新しいブログ投稿を作成するためのインターフェースを提供します。
+ * 画像アップロード機能と多言語対応、テーマ切り替えに対応します。
+ */
 export default function NewPostPage() {
   const router = useRouter(); // Next.jsのルーターフックを初期化
 
@@ -15,12 +20,12 @@ export default function NewPostPage() {
   const [title, setTitle] = useState("");
   // 投稿内容を管理するstate
   const [content, setContent] = useState("");
-  // 💡 追加: 選択されたファイルと画像プレビュー用state
+  // 選択されたファイルと画像プレビュー用state
   const [file, setFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  // 💡 追加: ローディング状態を管理するstate
+  // ローディング状態を管理するstate
   const [loading, setLoading] = useState(false);
-  // 💡 追加: エラーメッセージを管理するstate
+  // エラーメッセージを管理するstate
   const [error, setError] = useState<string | null>(null);
 
   // 言語コンテキストから現在の言語 (lang) と設定関数 (setLang) を取得
@@ -28,13 +33,19 @@ export default function NewPostPage() {
   // 現在の言語に基づいて使用する辞書オブジェクトを選択
   const dict = lang === "ja" ? ja : en;
 
-  // 💡 追加: ファイルが選択された時のハンドラー
+  // 💡 追加: テーマコンテキストから現在のテーマ (theme) を取得
+  const { theme } = useTheme();
+
+  /**
+   * ファイルが選択された時のハンドラー
+   * 選択されたファイルをstateに保存し、画像プレビューを生成します。
+   * @param {React.ChangeEvent<HTMLInputElement>} e - ファイル入力イベント
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile); // ファイルをstateに保存
+      setFile(selectedFile);
 
-      // 画像プレビューを生成
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -46,25 +57,29 @@ export default function NewPostPage() {
     }
   };
 
-  // 投稿作成処理を行う非同期ハンドラー関数 (handleSubmitに名称変更)
-  const handleSubmit = async (e: React.FormEvent) => { // e: React.FormEvent を引数に追加
+  /**
+   * 投稿作成処理を行うフォーム送信ハンドラー
+   * 画像のアップロードと投稿データの送信を非同期で行います。
+   * @param {React.FormEvent} e - フォーム送信イベント
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); // フォームのデフォルト送信を防ぐ
 
     setLoading(true); // ロード開始
-    setError(null); // エラーリセット
+    setError(null); // エラーメッセージをリセット
 
     let imageUrl: string | undefined; // Cloudinaryから取得する画像URLを格納する変数
 
     try {
-      // 💡 変更点: ファイルが選択されていれば先に画像をCloudinaryにアップロード
+      // ファイルが選択されていれば先に画像をCloudinaryにアップロード
       if (file) {
         console.log("画像をCloudinaryにアップロード中...");
         const formData = new FormData();
-        formData.append("file", file); // 'file'という名前でファイルをフォームデータに追加
+        formData.append("file", file);
 
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
-          body: formData, // FormDataを直接送信
+          body: formData,
         });
 
         if (!uploadRes.ok) {
@@ -84,13 +99,12 @@ export default function NewPostPage() {
 
       // 新しい投稿データをAPIエンドポイントにPOSTリクエストとして送信
       const res = await fetch("/api/posts", {
-        method: "POST", // HTTPメソッドはPOST
+        method: "POST",
         headers: {
-          "Content-Type": "application/json", // リクエストボディの形式はJSON
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`, // 認証ヘッダーにJWTトークンを含める
         },
-        // 💡 変更点: imageUrl があればリクエストボディに含める
-        body: JSON.stringify({ title, content, image_url: imageUrl }),
+        body: JSON.stringify({ title, content, image_url: imageUrl }), // imageUrl があればリクエストボディに含める
       });
 
       // レスポンスが正常でない場合
@@ -103,13 +117,13 @@ export default function NewPostPage() {
       // 投稿成功後、フォームフィールドと画像関連stateをクリア
       setTitle("");
       setContent("");
-      setFile(null); // 💡 追加
-      setImagePreview(null); // 💡 追加
+      setFile(null);
+      setImagePreview(null);
       // 投稿一覧ページへリダイレクト
       router.push("/blog");
     } catch (err: any) { // エラーの型を any に指定
       // エラー発生時の処理 (多言語対応メッセージを使用し、エラー詳細もコンソールに出力)
-      console.error(dict.postFail, err); // err.message 대신 err를 직접 로깅하여 자세한 오류 확인
+      console.error(dict.postFail, err);
       setError(err.message || dict.postFail); // ユーザー向けにはエラーメッセージを表示
     } finally {
       setLoading(false); // ロード終了
@@ -117,25 +131,24 @@ export default function NewPostPage() {
   };
 
   return (
-    // ページ全体のコンテナ。中央寄せ、パディング、相対位置指定
-    <div className="max-w-2xl mx-auto p-4 relative">
+    // ページ全体のコンテナ。背景色とテキスト色をテーマに基づいて設定。
+    // max-w-2xl mx-auto p-4 relative: 中央寄せ、パディング、相対位置指定
+    <div className={`max-w-2xl mx-auto p-4 relative ${theme === 'dark' ? 'dark:bg-gray-800 dark:text-gray-100' : 'bg-white text-gray-900'}`}>
       {/* 言語切り替えボタン - 右上固定 */}
       <div className="absolute top-4 right-4">
         <div className="inline-flex shadow rounded overflow-hidden">
-          {/* 英語切り替えボタン */}
           <button
             onClick={() => setLang("en")}
             className={`px-3 py-1 font-medium ${
-              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-gray-300"
             }`}
           >
             EN
           </button>
-          {/* 日本語切り替えボタン */}
           <button
             onClick={() => setLang("ja")}
             className={`px-3 py-1 font-medium ${
-              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-gray-300"
             }`}
           >
             JP
@@ -146,10 +159,10 @@ export default function NewPostPage() {
       {/* ページタイトル (辞書から取得) */}
       <h1 className="text-2xl font-bold mb-4 text-center">{dict.newPostTitle}</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4"> {/* 💡 変更点: form 태그 추가 및 onSubmit 핸들러 연결 */}
-        {/* タイトル入力フィールド (プレースホルダーも辞書から取得) */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* タイトル入力フィールド */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             {dict.titlePlaceholder}
           </label>
           <input
@@ -158,15 +171,16 @@ export default function NewPostPage() {
             placeholder={dict.titlePlaceholder}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required // 💡 追加: 必須フィールド
-            className="mt-1 block w-full border p-2 rounded-md shadow-sm"
-            disabled={loading} // 💡 追加: ローディング中は無効化
+            required
+            // 💡 変更: テーマに応じたスタイル適用
+            className="mt-1 block w-full border p-2 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+            disabled={loading}
           />
         </div>
 
-        {/* 内容入力テキストエリア (プレースホルダーも辞書から取得) */}
+        {/* 内容入力テキストエリア */}
         <div>
-          <label htmlFor="content" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             {dict.contentPlaceholder}
           </label>
           <textarea
@@ -174,48 +188,54 @@ export default function NewPostPage() {
             placeholder={dict.contentPlaceholder}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            required // 💡 追加: 必須フィールド
-            rows={8} // 高さ指定
-            className="mt-1 block w-full border p-2 rounded-md shadow-sm"
-            disabled={loading} // 💡 追加: ローディング中は無効化
+            required
+            rows={8}
+            // 💡 変更: テーマに応じたスタイル適用
+            className="mt-1 block w-full border p-2 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+            disabled={loading}
           ></textarea>
         </div>
 
-        {/* 💡 追加: 画像アップロードフィールド */}
+        {/* 画像アップロードフィールド */}
         <div>
-          <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             画像 (オプション)
           </label>
           <input
             type="file"
             id="image"
-            accept="image/*" // 画像ファイルのみ受け付ける
+            accept="image/*"
             onChange={handleFileChange}
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            disabled={loading} // 💡 追加: ローディング中は無効化
+            // 💡 変更: テーマに応じたスタイル適用
+            className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400
+                       file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                       file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700
+                       dark:file:bg-blue-800 dark:file:text-blue-200
+                       hover:file:bg-blue-100 dark:hover:file:bg-blue-700"
+            disabled={loading}
           />
           {imagePreview && (
             <div className="mt-4">
-              <p className="text-sm text-gray-600 mb-2">画像プレビュー:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">画像プレビュー:</p>
               <img src={imagePreview} alt="画像プレビュー" className="max-w-xs h-auto rounded-lg shadow-md" />
             </div>
           )}
         </div>
 
-        {/* 💡 追加: エラーメッセージ表示 */}
+        {/* エラーメッセージ表示 */}
         {error && (
           <p className="text-red-500 text-sm mt-2">{error}</p>
         )}
 
-        {/* 投稿作成ボタン (テキストも辞書から取得) */}
+        {/* 投稿作成ボタン */}
         <button
-          type="submit" // 💡 変更点: type="submit"으로 변경 (form 태그와 함께 사용)
-          className="bg-blue-500 text-white px-4 py-2 mt-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          disabled={loading} // 💡 追加: 로딩 중에는 버튼 비활성화
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 mt-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading}
         >
           {loading ? "作成中..." : dict.createPost}
         </button>
-      </form> {/* 💡 変更点: form 태그 닫기 */}
+      </form>
     </div>
   );
 }
