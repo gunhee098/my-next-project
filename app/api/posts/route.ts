@@ -1,84 +1,68 @@
-import { NextRequest, NextResponse } from "next/server"; // Next.jsのAPIルートのためのモジュール
-import pool from "@/lib/db"; // データベース接続プールをインポート
-import { authenticateUser } from "@/lib/auth"; // ユーザー認証ヘルパー関数をインポート
+import { NextRequest, NextResponse } from "next/server";
+import pool from "@/lib/db";
+import { authenticateUser } from "@/lib/auth";
 
-// ⚡ [GET] 投稿リストの取得
-// クエリパラメータ 'search' と 'orderBy' に基づいて投稿を検索し、一覧を返します。
 export async function GET(req: NextRequest) {
   try {
-    const client = await pool.connect(); // データベースクライアントを接続プールから取得
-    const { searchParams } = new URL(req.url); // リクエストURLから検索パラメータを取得
-    const keyword = searchParams.get("search"); // 'search' パラメータの値を取得
-    const orderBy = searchParams.get("orderBy"); // 💡 追加: 'orderBy' パラメータの値を取得
+    const client = await pool.connect();
+    const { searchParams } = new URL(req.url);
+
+    let keyword = searchParams.get("search"); // 'search' 파라미터의 값
+
+    // === 여기서 수정 ===
+    if (keyword) {
+      keyword = decodeURIComponent(keyword); // URL 인코딩된 검색어 디코딩
+    }
+    // ==================
+
+    // (디버깅을 위한 console.log는 잠시 유지)
+    console.log("--- API Request Debugging ---");
+    console.log("Received raw searchParams:", searchParams.toString());
+    console.log("Extracted keyword from searchParams (before decode):", searchParams.get("search"));
+    console.log("Decoded keyword:", keyword); // 디코딩된 키워드 확인
+    // ---
+
+    const orderBy = searchParams.get("orderBy");
 
     let query = `
-      SELECT 
-        posts.*, 
+      SELECT
+        posts.*,
         "User".name AS username,
-        posts.image_url AS image_url -- 💡 追加: image_url を明示的に選択
+        posts.image_url AS image_url
       FROM posts
       JOIN "User" ON posts.userid = "User".id
     `;
     const params = [];
     let whereClause = "";
 
-    // 検索キーワードがある場合、タイトルまたは内容で部分一致検索を実行
     if (keyword) {
+      // 디코딩된 키워드를 사용
       whereClause = `WHERE posts.title ILIKE $1 OR posts.content ILIKE $1`;
       params.push(`%${keyword}%`);
     }
 
-    // 💡 修正: ソート順を動的に設定
-    let orderClause = `ORDER BY posts.created_at DESC`; // デフォルトは最新順
+    let orderClause = `ORDER BY posts.created_at DESC`;
     if (orderBy === "oldest") {
-      orderClause = `ORDER BY posts.created_at ASC`; // 'oldest' の場合は古い順
+      orderClause = `ORDER BY posts.created_at ASC`;
     }
 
-    // クエリを組み立て
     query += ` ${whereClause} ${orderClause}`;
+
+    console.log("Final SQL Query to execute:", query);
+    console.log("Parameters for SQL query:", params);
 
     const result = await client.query(query, params);
 
-    client.release(); // データベースクライアントをプールに返却
-    return NextResponse.json(result.rows); // 取得した投稿データをJSON形式で返却
+    console.log("SQL Query Result Rows count:", result.rows.length);
+    console.log("SQL Query Result Rows (first 2 items):", result.rows.slice(0, 2));
+
+    client.release();
+    return NextResponse.json(result.rows);
   } catch (error) {
-    console.error("投稿の読み込みに失敗しました:", error);
+    console.error("Error in GET /api/posts:", error);
     return NextResponse.json({ error: "サーバーエラーが発生しました！" }, { status: 500 });
   }
-}
-
-// ⚡ [POST] 新しい投稿の作成
-// 認証されたユーザーとして新しいブログ投稿を作成します。
-export async function POST(req: NextRequest) {
-  try {
-    // ユーザー認証を実行。認証に失敗した場合はエラーがスローされます。
-    const userId = authenticateUser(req);
-    console.log("✔ ユーザーID:", userId);
-
-    // リクエストボディからタイトル、内容、💡 image_url を取得
-    const { title, content, image_url } = await req.json(); // 💡 追加: image_url
-
-    // タイトルまたは内容が提供されていない場合
-    if (!title || !content) {
-      return NextResponse.json({ error: "タイトルと内容を入力してください！" }, { status: 400 });
-    }
-
-    const client = await pool.connect(); // データベースクライアントを接続プールから取得
-    // 新しい投稿をデータベースに挿入 (💡 image_url フィールドも追加)
-    await client.query(
-      "INSERT INTO posts (userid, title, content, image_url, created_at) VALUES ($1, $2, $3, $4, NOW())", // 💡 SQL クエリ修正
-      [userId, title, content, image_url] // 💡 パラメータ修正
-    );
-    client.release(); // データベースクライアントをプールに返却
-
-    return NextResponse.json({ success: true }, { status: 201 }); // 成功レスポンスを返却 (Created)
-  } catch (error) {
-    console.error("投稿の作成に失敗しました:", error);
-    // 認証エラーはauthenticateUserで処理されるため、ここでは一般的なサーバーエラーとして返却
-    return NextResponse.json({ error: "サーバーエラーが発生しました！" }, { status: 500 });
-  }
-}
-
+} 
 // ⚡ [PUT] 既存の投稿の更新
 // 認証されたユーザーとして既存のブログ投稿を更新します。
 export async function PUT(req: NextRequest) {
