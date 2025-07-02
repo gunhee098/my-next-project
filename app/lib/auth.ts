@@ -1,50 +1,74 @@
-import jwt, { JwtPayload } from "jsonwebtoken";
-import { NextRequest } from "next/server";
+// 📂 app/lib/auth.ts
+// このファイルには、JWT認証関連のユーティリティ関数が含まれています。
 
-// JWTトークンを検証する関数
-// 環境変数 JWT_SECRET を使用してトークンの正当性を確認します。
-// @param token - 検証するJWT文字列
-// @returns 検証に成功した場合はデコードされたペイロード (JwtPayload 型)、失敗した場合は null
-export function verify(token: string): JwtPayload | null {
+// [モジュールインポート]
+import { NextRequest } from 'next/server'; // Next.js のリクエストオブジェクトを扱うためのモジュール
+import { jwtVerify, JWTPayload } from 'jose'; // jose ライブラリを使用 (jsonwebtoken の代替として推奨される、より安全なライブラリ)
+// import prisma from '@/lib/db'; // ⚠️ このファイルでは直接データベースアクセスがないため、この行は削除します。
+
+// [型定義]
+// JWT ペイロードにカスタムフィールドを追加するためのインターフェース
+// Prisma の UUID に合わせて userId を string として定義
+interface CustomJWTPayload extends JWTPayload {
+  id: string; // ユーザーID (PrismaのUUIDに合わせ string タイプ)
+  email: string; // ユーザーのメールアドレス
+  name: string; // ユーザー名
+}
+
+/**
+ * @function getJwtSecretKey
+ * @description 環境変数からJWT Secret Keyを安全に取得し、Uint8Array形式で返します。
+ * JWT_SECRETが設定されていない場合はエラーをスローします。
+ * @returns {Uint8Array} JWT署名/検証に使用するシークレットキー
+ */
+const getJwtSecretKey = (): Uint8Array => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    // JWT_SECRET が設定されていない場合、アプリケーションの起動時にこのエラーが確認されるべき
+    throw new Error('JWT_SECRET 環境変数が設定されていません。');
+  }
+  return new TextEncoder().encode(secret); // Secret Key を Uint8Array (バイト配列) にエンコード
+};
+
+/**
+ * @function authenticateUser
+ * @description Next.js のリクエストオブジェクトから認証トークンを抽出し、
+ * jose ライブラリを使用してJWTを検証し、認証済みユーザー情報を返します。
+ * @param {NextRequest} req - Next.js のリクエストオブジェクト
+ * @returns {{ userId: string; userEmail: string; userName: string } | null}
+ * 認証成功時はユーザー情報、失敗時は null を返します。
+ *
+ * @attention 重要: この関数は主にトークン検証のみを行います。
+ * データベースからのユーザー詳細情報が必要な場合は、APIルート側でprismaを使用して別途取得してください。
+ */
+export const authenticateUser = async (req: NextRequest): Promise<{ userId: string; userEmail: string; userName: string } | null> => {
+  const authHeader = req.headers.get('Authorization'); // Authorization ヘッダーから認証情報を取得
+
+  // [認証ヘッダーのバリデーション]
+  // Authorization ヘッダーが存在しない、または "Bearer " で始まらない場合は認証失敗
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log("認証失敗: Authorization ヘッダーがないか、Bearer トークンではありません。");
+    return null;
+  }
+
+  const token = authHeader.split(' ')[1]; // "Bearer " プレフィックスを除去して、実際のトークン文字列を抽出
+
   try {
-    // JWT_SECRET が設定されていない場合、"default_secret" を使用してトークンを検証
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default_secret");
+    // [JWTの検証]
+    // getJwtSecretKey() で取得したシークレットキーを使用してトークンを検証し、ペイロードを抽出
+    const { payload } = await jwtVerify(token, getJwtSecretKey()) as { payload: CustomJWTPayload };
+    console.log("✔ JWT検証成功。ユーザーID (JWT ペイロードから抽出):", payload.id);
 
-    // デコードされた結果がオブジェクトであり、かつ 'id' プロパティを持つことを確認
-    if (typeof decoded === "object" && "id" in decoded) {
-      return decoded as JwtPayload; // JwtPayload型としてキャストして返す
-    }
-    return null; // idプロパティがない場合はnullを返す
+    // ペイロードから必要なユーザー情報を抽出し、オブジェクトとして返却
+    return {
+      userId: payload.id,
+      userEmail: payload.email,
+      userName: payload.name,
+    };
   } catch (error) {
-    // JWT認証が失敗した場合のエラーハンドリング
-    console.error("🚨 JWT認証失敗:", error); // エラーをコンソールに出力
-    return null; // エラー発生時はnullを返す
+    // [エラーハンドリング - JWT検証失敗時]
+    // トークンが無効（期限切れ、不正な署名など）な場合にエラーを捕捉
+    console.error("🚨 JWT検証失敗:", error);
+    return null;
   }
-}
-
-// ユーザーを認証し、ユーザーIDを返す関数
-// Next.jsのリクエストオブジェクトからAuthorizationヘッダーを読み取り、JWTを検証します。
-// @param req - Next.jsのNextRequestオブジェクト
-// @returns 認証されたユーザーのID（数値型）
-// @throws 認証ヘッダーがない、トークンが無効な場合
-export function authenticateUser(req: NextRequest): number {
-  // Authorizationヘッダーから"Bearer <token>"形式の文字列を取得
-  const authHeader = req.headers.get("Authorization");
-  // ヘッダーからトークン部分（"Bearer "以降）を抽出
-  const token = authHeader?.split(" ")[1];
-
-  // トークンが存在しない場合、エラーをスロー
-  if (!token) {
-    throw new Error("ログインが必要です！");
-  }
-
-  // 取得したトークンを検証
-  const userData = verify(token);
-  // ユーザーデータが有効でない、またはユーザーIDが数値でない場合、エラーをスロー
-  if (!userData || typeof userData.id !== "number") {
-    throw new Error("無効なトークンです！");
-  }
-
-  // 認証されたユーザーのIDを数値型で返す
-  return Number(userData.id);
-}
+};

@@ -1,48 +1,68 @@
+// 📂 prisma/schema.prisma
+
+// 데이터베이스 연결 설정
+datasource db {
+  provider = "postgresql" // PostgreSQL을 사용하고 있으므로 "postgresql"로 설정
+  url      = env("DATABASE_URL") // 환경 변수에서 DB 연결 URL을 가져옴
+}
+
+// Prisma 클라이언트 생성 설정
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql" // 사용 중인 DB에 맞게 변경
-  url      = env("DATABASE_URL")
+model Post {
+  id        String    @id @default(uuid()) @map("id")
+  title     String
+  content   String
+  imageUrl  String?   @map("image_url") // DB 컬럼명은 image_url, Prisma 모델 필드명은 imageUrl
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) // ★★★ onDelete: Cascade 추가 및 확인
+
+  comments  Comment[]
+  likes     Like[]
+
+  @@map("post") // ★★★ 소문자 단수형 테이블 이름으로 매핑
 }
 
 model User {
-  id       String @id @default(uuid())
-  name     String
-  email    String @unique
-  password String
+  id        String    @id @default(uuid()) @map("id")
+  email     String    @unique
+  name      String?
+  password  String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  posts    Post[] // ✅ 관계 추가
-  comments Comment[]
+  posts     Post[]
+  comments  Comment[]
+  likes     Like[]
 
-  @@map("users")
-}
-
-model Post {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  comments Comment[]
-
-  @@map("posts")
+  @@map("user") // ★★★ 소문자 단수형 테이블 이름으로 매핑
 }
 
 model Comment {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @map("id")
   content   String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at") // 이 줄도 있는지 확인
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  postId String
-  post   Post   @relation(fields: [postId], references: [id]) // ✅ OK
+  @@map("comment")
+}
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id]) // ✅ OK
+model Like {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("comments")
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId]) // userId와 postId를 복합 기본 키로 지정
+  @@map("like")
 }

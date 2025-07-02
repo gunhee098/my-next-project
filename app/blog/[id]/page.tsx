@@ -1,32 +1,34 @@
+// 📂 app/blog/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "next/image"; // Image 컴포넌트가 사용되지 않는 경우 제거 고려
 import { useLang } from "@/components/LanguageProvider";
 import en from "@/locales/en.json";
 import ja from "@/locales/ja.json";
-import { jwtDecode } from "jwt-decode"; // 💡 추가: jwtDecode 임포트
-import { formatDistanceToNow, format } from "date-fns"; // 💡 추가: 날짜 포맷 임포트
-import { ko } from "date-fns/locale"; // 💡 추가: 한국어 로케일 임포트
+import { jwtDecode } from "jwt-decode"; // 💡 追加: jwtDecode インポート
+import { formatDistanceToNow, format } from "date-fns"; // 💡 追加: 日付フォーマット インポート
+import { ko } from "date-fns/locale"; // 💡 追加: 韓国語ロケール インポート
 
 // 投稿データのインターフェース定義 (Postインターフェースを最新化)
 interface Post {
-  id: number;
+  id: string; // 💡 修正: number -> string (UUIDのため)
   title: string;
   content: string;
-  userid: number;
-  image_url?: string;
-  author?: {
+  userId: string; // 💡 修正: userid -> userId (camelCase, string)
+  imageUrl?: string | null; // 💡 修正: image_url -> imageUrl (camelCase)
+  user?: { // author 대신 user 객체로 변경 (Prisma 관계 모델에 따라)
     name: string;
+    email: string; // 필요시 추가
   };
-  created_at: string; // 💡 created_at으로 통일
-  username: string; // 💡 username 추가 (GET 응답에서 받을 필드)
+  createdAt: string; // 💡 修正: created_at -> createdAt (camelCase)
+  username: string; // GET 応答で受け取るフィールド (Post API에서 user.name을 username으로 매핑)
 }
 
-// JWT 토큰 디코딩 인터페이스 (재사용)
+// JWT トークン デコーディング インターフェース (再利用)
 interface DecodedToken {
-  id: number;
+  id: string; // 💡 修正: number -> string (UUIDのため)
   email: string;
   name: string;
   iat: number;
@@ -39,11 +41,11 @@ export default function PostDetailPage() {
   const params = useParams();
   const postId = params.id as string;
 
-  const [post, setPost] = useState<Post | null>(null); // 💡 타입 명확화
+  const [post, setPost] = useState<Post | null>(null); // 💡 タイプ明確化
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null); // 💡 추가: 로그인된 유저 ID
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // 💡 修正: number -> string (UUIDのため)
 
   const { lang, setLang } = useLang();
   const dict = lang === "ja" ? ja : en;
@@ -54,7 +56,7 @@ export default function PostDetailPage() {
       setIsLoggedIn(true);
       try {
         const decoded: DecodedToken = jwtDecode(token);
-        setCurrentUserId(decoded.id); // 💡 로그인된 유저 ID 설정
+        setCurrentUserId(decoded.id); // 💡 ログインされたユーザーID設定 (string)
       } catch (e) {
         console.error("Failed to decode token", e);
         setIsLoggedIn(false);
@@ -69,9 +71,11 @@ export default function PostDetailPage() {
       try {
         const res = await fetch(`/api/posts/${postId}`);
         if (!res.ok) {
-          throw new Error(dict.fetchPostFail);
+          // 💡 エラーメッセージの詳細化
+          const errorData = await res.json().catch(() => ({ error: '不明なエラー' }));
+          throw new Error(errorData.error || dict.fetchPostFail);
         }
-        const data: Post = await res.json(); // 💡 타입 명확화
+        const data: Post = await res.json(); // 💡 タイプ明確化
         setPost(data);
         console.log("✅ 投稿の読み込みが完了しました:", data);
       } catch (err: any) {
@@ -101,21 +105,21 @@ export default function PostDetailPage() {
         throw new Error(dict.needLogin);
       }
 
-      // 💡 DELETE 요청 시 id를 URL 파라미터로 보냄 (더 안정적)
+      // 💡 DELETE リクエスト時、IDをURLパラメータで送信 (より安定的)
       const res = await fetch(`/api/posts/${postId}`, {
         method: "DELETE",
         headers: {
-          "Content-Type": "application/json", // 💡 Content-Type 추가
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // body: JSON.stringify({ id: postId }), // 💡 body 제거 (URL 파라미터로 보내므로)
       });
 
       if (res.ok) {
         alert("投稿が正常に削除されました！");
         router.push("/blog");
       } else {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({ error: '不明なエラー' })); // JSON 파싱 실패 대비
+        // サーバーからのエラーメッセージがある場合はそれを使用し、ない場合は一般的なメッセージを表示
         throw new Error(errorData.error || dict.deleteFail);
       }
     } catch (err: any) {
@@ -126,16 +130,18 @@ export default function PostDetailPage() {
     }
   };
 
-  // 💡 추가: 날짜 포맷 함수
+  // 💡 追加: 日付フォーマット関数
   const formatCreatedAt = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
 
+    // 24時間以内なら「X時間前」のように表示
     if (diff < 1000 * 60 * 60 * 24) {
-      return formatDistanceToNow(date, { addSuffix: true, locale: ko });
+      return formatDistanceToNow(date, { addSuffix: true, locale: ko }); // date-fns의 locale은 ko를 사용
     }
 
+    // それ以上なら「YYYY.MM.DD」形式で表示
     return format(date, "yyyy.MM.dd");
   };
 
@@ -180,14 +186,14 @@ export default function PostDetailPage() {
       <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
       {/* 著者と日付情報の安全な表示 */}
       <p className="text-gray-600 text-sm mb-6">
-        {dict.author}: {post.username || '不明'} | {dict.date}: {post.created_at ? formatCreatedAt(post.created_at) : '不明な日付'} {/* 💡 수정: username 사용, formatCreatedAt 적용 */}
+        {dict.author}: {post.username || '不明'} | {dict.date}: {post.createdAt ? formatCreatedAt(post.createdAt) : '不明な日付'} {/* 💡 修正: createdAt 사용 */}
       </p>
 
       {/* 画像表示 */}
-      {post.image_url && (
+      {post.imageUrl && ( // 💡 修正: post.imageUrl 사용
         <div className="mb-6">
           <img
-            src={post.image_url}
+            src={post.imageUrl} // 💡 修正: post.imageUrl 사용
             alt={post.title}
             className="w-full h-auto max-h-[500px] object-contain rounded-lg shadow-md"
           />
@@ -199,7 +205,7 @@ export default function PostDetailPage() {
       </div>
 
       {/* 編集・削除ボタン (ログイン中かつ投稿者のみ表示) */}
-      {isLoggedIn && currentUserId === post.userid && ( // 💡 수정: 로그인 유저와 게시글 유저 ID 비교
+      {isLoggedIn && currentUserId === post.userId && ( // 💡 修正: post.userId와 비교
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => router.push(`/blog/${postId}/edit`)}

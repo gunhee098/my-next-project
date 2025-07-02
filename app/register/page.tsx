@@ -1,3 +1,4 @@
+// 📂 app/register/page.tsx
 "use client"; // このファイルがクライアントサイドで実行されることを宣言
 
 import { useState } from "react";
@@ -5,6 +6,8 @@ import { useRouter } from "next/navigation"; // ルーティング管理のた�
 import { useLang } from "@/components/LanguageProvider"; // LanguageProviderから言語コンテキストフックをインポート
 import en from "@/locales/en.json"; // 英語の辞書ファイルをインポート
 import ja from "@/locales/ja.json"; // 日本語の辞書ファイルをインポート
+
+import { useTheme } from "@/components/ThemeProvider"; // ★ useTheme 훅을 임포트합니다.
 
 // ユーザー登録ページコンポーネント
 // ユーザーが新しいアカウントを登録するためのフォームを提供します。
@@ -23,6 +26,8 @@ export default function RegisterPage() {
   const { lang, setLang } = useLang();
   // 現在の言語に基づいて使用する辞書オブジェクトを選択
   const dict = lang === "ja" ? ja : en;
+
+  const { theme } = useTheme(); // ★ useTheme 훅으로 현재 테마 상태를 가져옵니다.
 
   // ユーザー登録処理を行う非同期ハンドラー関数
   const handleRegister = async (e: React.FormEvent) => {
@@ -45,7 +50,6 @@ export default function RegisterPage() {
         // 成功メッセージを表示 (辞書から取得)
         setMessage({ text: dict.registerSuccess, type: "success" });
         // UX向上のため、メッセージ表示後に2秒待ってからログインページへリダイレクト
-        // （必要に応じて、この自動リダイレクトを無効にし、ユーザーが手動で移動するように変更することも可能です）
         setTimeout(() => router.push("/"), 2000);
       } else {
         // レスポンスがエラーの場合、サーバーからのエラーメッセージまたはデフォルトの登録失敗メッセージを表示
@@ -60,7 +64,8 @@ export default function RegisterPage() {
 
   return (
     // ページ全体のコンテナ。中央寄せ、背景色、相対位置指定
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 relative">
+    // ★ 테마 상태에 따라 dark 클래스를 적용하여 Tailwind 다크 모드 유틸리티 활성화
+    <div className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'dark' : ''} bg-gray-100 dark:bg-gray-900 relative`}>
       {/* 言語切り替えボタン - 右上固定 */}
       <div className="absolute top-4 right-4">
         <div className="inline-flex shadow rounded overflow-hidden">
@@ -68,7 +73,9 @@ export default function RegisterPage() {
           <button
             onClick={() => setLang("en")}
             className={`px-3 py-1 font-medium ${
-              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+              lang === "en"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white" // ★ 다크 모드 클래스 추가
             }`}
           >
             EN
@@ -77,7 +84,9 @@ export default function RegisterPage() {
           <button
             onClick={() => setLang("ja")}
             className={`px-3 py-1 font-medium ${
-              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+              lang === "ja"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white" // ★ 다크 모드 클래스 추가
             }`}
           >
             JP
@@ -86,9 +95,11 @@ export default function RegisterPage() {
       </div>
 
       {/* 登録フォームのコンテナ */}
-      <div className="bg-white p-8 rounded-xl shadow-lg w-96">
+      {/* ★ 다크 모드 클래스 추가 */}
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-96">
         {/* 登録フォームのタイトル (辞書から取得) */}
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">{dict.registerTitle}</h2>
+        {/* ★ 다크 모드 클래스 추가 */}
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">{dict.registerTitle}</h2>
 
         {/* メッセージ表示領域 (message stateに基づいて条件的に表示) */}
         {message && (
@@ -111,7 +122,10 @@ export default function RegisterPage() {
               placeholder={dict.namePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              // ★ 입력 필드에 다크 모드 클래스 추가
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
               required // 必須入力
             />
           </div>
@@ -122,7 +136,10 @@ export default function RegisterPage() {
               placeholder={dict.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              // ★ 입력 필드에 다크 모드 클래스 추가
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
               required // 必須入力
             />
           </div>
@@ -133,7 +150,10 @@ export default function RegisterPage() {
               placeholder={dict.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              // ★ 입력 필드에 다크 모드 클래스 추가
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
               required // 必須入力
             />
           </div>
@@ -146,7 +166,8 @@ export default function RegisterPage() {
           </button>
         </form>
         {/* 既にアカウントがある場合のプロンプトとログインリンク (テキストも辞書から取得) */}
-        <p className="text-center mt-4 text-gray-600">
+        {/* ★ 다크 모드 클래스 추가 */}
+        <p className="text-center mt-4 text-gray-600 dark:text-gray-300">
           {dict.alreadyAccountPrompt}{" "}
           <a href="/" className="text-blue-500 font-bold hover:underline">
             {dict.loginLink}

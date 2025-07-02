@@ -7,10 +7,6 @@ import { jwtDecode } from "jwt-decode";
 import { formatDistanceToNow, format } from "date-fns";
 import { ko } from "date-fns/locale"; // 現在韓国語ロケール(ko)を使用。
 
-// Note: formatDistanceToNow, format関数で日本語ロケールを使用する場合、
-// 'date-fns/locale/ja'をインポートし、`locale: ja`を適用してください。
-// import { ja } from "date-fns/locale"; // 日本語ロケールを使用する場合はこの行のコメントを解除
-
 import { useLang } from "@/components/LanguageProvider"; // 言語プロバイダーをインポート
 import en from "@/locales/en.json"; // 英語ロケールデータ
 import ja from "@/locales/ja.json"; // 日本語ロケールデータ
@@ -18,21 +14,24 @@ import ja from "@/locales/ja.json"; // 日本語ロケールデータ
 import { useTheme } from "@/components/ThemeProvider"; // テーマプロバイダーからuseThemeフックをインポート
 import ThemeToggleButton from "@/components/ThemeToggleButton"; // テーマ切り替えボタンコンポーネントをインポート
 
-// 投稿データのインターフェース定義
+// 投稿データのインターフェース定義 (Prismaのスキーマに合わせる)
 interface Post {
-  id: number;
+  id: string; // PrismaのUUIDに合わせ string タイプ
   title: string;
   content: string;
-  userid: number;
-  created_at: string;
-  username: string;
-  image_url?: string;
-  likes_count: number; // いいね数を表すフィールド
+  userId: string; // Prismaの userId (camelCase) に合わせる
+  createdAt: string; // Prismaの createdAt (camelCase) に合わせる。DateオブジェクトではなくAPIから文字列で来る想定
+  username: string; // user.name を通して取得
+  imageUrl?: string | null; // image_url ではなく imageUrl (Prismaモデルそのまま)
+  _count: { // Prismaの集計結果に合わせる
+    comments: number;
+    likes: number;
+  };
 }
 
-// デコードされたJWTトークンのインターフェース定義
+// デコードされたJWTトークンのインターフェース定義 (ユーザーIDもstringに合わせる)
 interface DecodedToken {
-  id: number; // ユーザーID
+  id: string; // ユーザーID (PrismaのUUIDに合わせ string タイプ)
   email: string;
   name: string;
   iat: number; // トークン発行時間
@@ -49,7 +48,7 @@ export default function BlogPage() {
   const router = useRouter(); // Next.jsルーターフックを初期化
   const [posts, setPosts] = useState<Post[]>([]); // 投稿リストの状態管理
   const [isLoggedIn, setIsLoggedIn] = useState(false); // ログイン状態の管理
-  const [userId, setUserId] = useState<number | null>(null); // ログインユーザーIDの管理
+  const [userId, setUserId] = useState<string | null>(null); // ログインユーザーIDの管理 (stringに合わせる)
   const [userEmail, setUserEmail] = useState<string | null>(null); // ログインユーザーメールの管理
   const [sortOrder, setSortOrder] = useState<"latest" | "oldest">("latest"); // 投稿ソート順の管理
   const [search, setSearch] = useState(""); // 検索キーワードの管理
@@ -78,6 +77,11 @@ export default function BlogPage() {
 
       const url = `/api/posts?${queryParams.toString()}`; // APIリクエストURLを構築
 
+      console.log("--- fetchPosts デバッグ ---");
+      console.log("フェッチするURL:", url); // URL이 제대로 구성되는지 확인
+      console.log("現在の検索キーワード:", keyword); // 현재 검색 키워드 확인
+      console.log("現在のソート順:", sortOrder); // 현재 정렬 순서 확인
+
       const token = localStorage.getItem("token"); // ローカルストレージからJWTトークンを取得
       const headers: HeadersInit = {};
       if (token) {
@@ -102,10 +106,14 @@ export default function BlogPage() {
       }
 
       // サーバー応答が正常でない場合
-      if (!res.ok) throw new Error("サーバーからの応答が不正です。");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: '不明なエラー' }));
+        throw new Error(errorData.error || "サーバーからの応答が不正です。");
+      }
 
       const data: Post[] = await res.json(); // 応答をJSONとしてパース
       setPosts(data); // 投稿リストを更新
+      console.log("投稿が正常にフェッチされました。件数:", data.length); // 불러온 게시물 개수 확인
     } catch (error) {
       console.error("投稿の読み込みに失敗しました:", error);
     }
@@ -137,7 +145,7 @@ export default function BlogPage() {
 
         // ログイン状態とユーザー情報を設定
         setIsLoggedIn(true);
-        setUserId(decoded.id); // デコードされたトークンからユーザーIDを設定
+        setUserId(decoded.id); // デコードされたトークンからユーザーIDを設定 (string)
         setUserEmail(decoded.email);
         setUserName(decoded.name);
       } catch (err) {
@@ -166,9 +174,9 @@ export default function BlogPage() {
 
   /**
    * 投稿を削除するハンドラー関数。
-   * @param id 削除する投稿のID
+   * @param id 削除する投稿のID (stringに合わせる)
    */
-  const handleDeletePost = async (id: number) => {
+  const handleDeletePost = async (id: string) => {
     if (!confirm(dict.confirmDelete)) return; // 削除確認ダイアログ
 
     try {
@@ -194,7 +202,7 @@ export default function BlogPage() {
           router.push("/");
           return;
         }
-        const errorData = await res.json(); // エラー応答をJSONとしてパース
+        const errorData = await res.json().catch(() => ({ error: '不明なエラー' })); // エラー応答をJSONとしてパース
         throw new Error(errorData.error || dict.deleteFail); // エラーメッセージをスロー
       }
 
@@ -223,25 +231,31 @@ export default function BlogPage() {
    * @param dateString 日付文字列
    * @returns フォーマットされた日付文字列
    */
-  const formatCreatedAt = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatCreatedAt = (dateString: string) => { // Dateオブジェクトではなく文字列を受け取るように変更
+    const date = new Date(dateString); // 文字列をDateオブジェクトに変換
+
+    // 日付が有効な値か確認する防御ロジック
+    if (isNaN(date.getTime())) {
+      console.error("🚨 Invalid date value received for formatCreatedAt:", dateString);
+      return "日付情報なし"; // 無効な日付の場合に表示するテキスト
+    }
+
     const now = new Date();
     const diff = now.getTime() - date.getTime();
 
-    if (diff < 1000 * 60 * 60 * 24) {
-      // 現在は韓国語(ko)ロケールを使用。日本語(ja)を使用するにはjaロケールをインポートし、locale: ja に変更してください。
-      return formatDistanceToNow(date, { addSuffix: true, locale: ko }); 
+    if (diff < 1000 * 60 * 60 * 24) { // 24時間以内
+      return formatDistanceToNow(date, { addSuffix: true, locale: ko }); // 韓国語ロケール使用
     }
 
-    return format(date, "yyyy.MM.dd");
+    return format(date, "yyyy.MM.dd"); // それ以上であれば「YYYY.MM.DD」形式で表示
   };
 
   /**
    * いいねボタンクリック時のハンドラー。
    * いいねの追加/取り消しを処理し、UIを更新します。
-   * @param postId いいね対象の投稿ID
+   * @param postId いいね対象の投稿ID (stringに合わせる)
    */
-  const handleLikeToggle = async (postId: number) => {
+  const handleLikeToggle = async (postId: string) => { // postId タイプを string に変更
     // ログインしていない場合、処理を中断しログインページへリダイレクト
     if (!isLoggedIn || userId === null) {
       alert("ログインが必要です。"); // ユーザーに通知
@@ -276,7 +290,8 @@ export default function BlogPage() {
 
       // その他のサーバーエラーの場合
       if (!res.ok) {
-        const errorData = await res.json();
+        // ここで res.statusText を直接使うのではなく、res.json() からエラーメッセージを取得する
+        const errorData = await res.json().catch(() => ({ error: '不明なエラー' })); // JSON 파싱 실패 대비
         // 409 Conflict はすでにいいね済みであることを意味
         if (res.status === 409) {
           console.warn("すでにいいね済み、または同時いいね試行です。");
@@ -296,7 +311,10 @@ export default function BlogPage() {
             // いいね数の更新
             return {
               ...post,
-              likes_count: newLikeStatus ? post.likes_count + 1 : post.likes_count - 1,
+              _count: {
+                ...post._count,
+                likes: newLikeStatus ? post._count.likes + 1 : post._count.likes - 1,
+              },
             };
           }
           return post;
@@ -308,7 +326,7 @@ export default function BlogPage() {
       alert(`いいねの処理に失敗しました: ${e.message}`); // いいね処理失敗を通知
       console.error("いいねの切り替えに失敗しました:", e);
       // エラー発生時、データ全体を再フェッチしてUIをロールバックする効果
-      fetchPosts(search);
+      fetchPosts(search); // エラー発生 시, 전체 데이터를 다시 가져와 UI 롤백
     }
   };
 
@@ -388,14 +406,20 @@ export default function BlogPage() {
             className="w-1/2 px-4 py-2 rounded border border-gray-300 dark:border-gray-600
                        bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             value={search}
-            onChange={(e) => {
-              const keyword = e.target.value;
-              setSearch(keyword);
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                console.log("Enter key pressed! Fetching posts with search:", search);
+                fetchPosts(search);
+              }
             }}
           />
           {/* 検索ボタン */}
           <button
-            onClick={() => fetchPosts(search)}
+            onClick={() => {
+              console.log("Search button clicked! Fetching posts with search:", search);
+              fetchPosts(search);
+            }}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
           >
             {dict.search}
@@ -405,6 +429,7 @@ export default function BlogPage() {
           {search && (
             <button
               onClick={() => {
+                console.log("Show All button clicked!");
                 setSearch(""); // 検索キーワードをクリア
                 fetchPosts(""); // 全ての投稿を再フェッチ
               }}
@@ -416,7 +441,10 @@ export default function BlogPage() {
 
           {/* ソートボタン群: 新しい順/古い順 */}
           <button
-            onClick={() => setSortOrder("latest")}
+            onClick={() => {
+              console.log("Sort by Latest clicked!");
+              setSortOrder("latest");
+            }}
             className={`px-4 py-2 rounded ${
               sortOrder === "latest" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
             }`}
@@ -424,7 +452,10 @@ export default function BlogPage() {
             {dict.latest}
           </button>
           <button
-            onClick={() => setSortOrder("oldest")}
+            onClick={() => {
+              console.log("Sort by Oldest clicked!");
+              setSortOrder("oldest");
+            }}
             className={`px-4 py-2 rounded ${
               sortOrder === "oldest" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
             }`}
@@ -441,6 +472,7 @@ export default function BlogPage() {
           ) : (
             // 各投稿アイテムのレンダリング
             posts.map((post) => (
+              // post.id は string になっているはずなので、key にそのまま使用可能
               <li key={post.id} className="border border-gray-200 dark:border-gray-700 p-4 rounded shadow flex flex-col md:flex-row items-start md:items-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 {/* 投稿タイトルと内容、投稿者、作成日時 */}
                 <div className="flex-grow">
@@ -455,15 +487,15 @@ export default function BlogPage() {
                   <p className="text-gray-700 dark:text-gray-300 mb-2 line-clamp-2">{post.content.split('\n')[0]}</p>
                   {/* 投稿者名と作成日時 */}
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {dict.author}: {post.username} ・ {dict.date}: {formatCreatedAt(post.created_at)}
+                    {dict.author}: {post.username} ・ {dict.date}: {post.createdAt ? formatCreatedAt(post.createdAt) : "日付情報なし"}
                   </p>
                 </div>
 
                 {/* 画像がある場合に表示 */}
-                {post.image_url && (
+                {post.imageUrl && (
                   <div className="md:ml-4 flex-shrink-0 mt-4 md:mt-0">
                     <img
-                      src={post.image_url}
+                      src={post.imageUrl}
                       alt={post.title}
                       className="w-24 h-24 object-cover rounded-md shadow-sm"
                     />
@@ -471,11 +503,11 @@ export default function BlogPage() {
                 )}
 
                 {/* ログインユーザーが自身の投稿の場合に表示される編集・削除ボタン */}
-                {userId === post.userid && (
+                {userId === post.userId && (
                   <div className="mt-2 flex gap-2 md:ml-4">
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // 親要素のクリックイベントが発火しないようにする
+                        e.stopPropagation();
                         router.push(`/blog/${post.id}/edit`);
                       }}
                       className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
@@ -484,7 +516,7 @@ export default function BlogPage() {
                     </button>
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // 親要素のクリックイベントが発火しないようにする
+                        e.stopPropagation();
                         handleDeletePost(post.id);
                       }}
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
@@ -498,25 +530,23 @@ export default function BlogPage() {
                 <div className="flex items-center mt-2 md:ml-4">
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // 親要素のクリックイベントを防ぐ
+                      e.stopPropagation();
                       handleLikeToggle(post.id);
                     }}
                     className="flex items-center text-red-500 hover:text-red-700 transition-colors duration-200 focus:outline-none"
-                    disabled={!isLoggedIn} // 未ログイン時はボタンを無効化
+                    disabled={!isLoggedIn}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-6 w-6 mr-1"
-                      fill="currentColor" // 現在は常に塗りつぶされたハート。実際はいいねの状態に応じて変更可能
+                      fill="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      {/* 塗りつぶされたハートアイコンのパス */}
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                     </svg>
                     いいね
                   </button>
-                  {/* いいね数表示 */}
-                  <span className="ml-2 text-gray-700 dark:text-gray-300 font-semibold">{post.likes_count}</span>
+                  <span className="ml-2 text-gray-700 dark:text-gray-300 font-semibold">{post._count.likes}</span>
                 </div>
 
               </li>
