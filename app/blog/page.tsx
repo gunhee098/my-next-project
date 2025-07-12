@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link"; // Linkコンポーネントをインポート
 import { jwtDecode } from "jwt-decode";
 import { formatDistanceToNow, format } from "date-fns";
 import { ko } from "date-fns/locale"; // 現在韓国語ロケール(ko)を使用。
@@ -253,8 +254,11 @@ export default function BlogPage() {
   /**
    * いいねボタンクリック時のハンドラー。
    * いいねの追加/取り消しを処理し、UIを更新します。
+   * 이 함수는 이제 상세 페이지에서 좋아요를 누를 때에만 사용되며, 목록 페이지에서는 호출되지 않습니다.
    * @param postId いいね対象の投稿ID (stringに合わせる)
    */
+  // 이 handleLikeToggle 함수는 이제 목록 페이지에서는 호출되지 않습니다.
+  // 이 함수는 app/blog/[id]/page.tsx (상세 페이지)에서만 사용됩니다.
   const handleLikeToggle = async (postId: string) => { // postId タイプを string に変更
     // ログインしていない場合、処理を中断しログインページへリダイレクト
     if (!isLoggedIn || userId === null) {
@@ -272,7 +276,7 @@ export default function BlogPage() {
       }
 
       const res = await fetch('/api/likes', {
-        method: 'POST',
+        method: 'POST', // POST로 고정 (서버에서 토글 처리)
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`, // API保護のためトークンを送信
@@ -290,42 +294,35 @@ export default function BlogPage() {
 
       // その他のサーバーエラーの場合
       if (!res.ok) {
-        // ここで res.statusText を直接使うのではなく、res.json() からエラーメッセージを取得する
         const errorData = await res.json().catch(() => ({ error: '不明なエラー' })); // JSON 파싱 실패 대비
-        // 409 Conflict はすでにいいね済みであることを意味
         if (res.status === 409) {
           console.warn("すでにいいね済み、または同時いいね試行です。");
-          // alert("すでにいいねをされています！"); // ユーザーへの通知を有効にする場合はこの行のコメントを解除
         }
-        // それ以外のすべてのサーバーエラー
         throw new Error(errorData.error || `サーバーエラーが発生しました: ${res.status} ${res.statusText}`);
       }
 
-      const { message, newLikeStatus } = await res.json(); // 成功メッセージと新しいいいね状態を取得
+      const { message, isLiked } = await res.json(); // 서버에서 isLiked 상태를 받아옴
       console.log(message); // "いいねしました！" または "いいねを取り消しました！"
 
       // UIを即時更新 (オプティミスティックアップデート)
       setPosts(prevPosts =>
         prevPosts.map(post => {
           if (post.id === postId) {
-            // いいね数の更新
+            // 좋아요 수 업데이트
             return {
               ...post,
               _count: {
                 ...post._count,
-                likes: newLikeStatus ? post._count.likes + 1 : post._count.likes - 1,
+                likes: isLiked ? post._count.likes + 1 : post._count.likes - 1, // 서버가 반환한 isLiked에 따라 업데이트
               },
             };
           }
           return post;
         })
       );
-      // 必要であれば、`fetchPosts(search);` を呼び出して全体データを同期することも可能ですが、
-      // 現在はオプティミスティックアップデートで十分です。
     } catch (e: any) { // エラーをany型でキャッチ
       alert(`いいねの処理に失敗しました: ${e.message}`); // いいね処理失敗を通知
       console.error("いいねの切り替えに失敗しました:", e);
-      // エラー発生時、データ全体を再フェッチしてUIをロールバックする効果
       fetchPosts(search); // エラー発生 시, 전체 데이터를 다시 가져와 UI 롤백
     }
   };
@@ -477,12 +474,15 @@ export default function BlogPage() {
                 {/* 投稿タイトルと内容、投稿者、作成日時 */}
                 <div className="flex-grow">
                   {/* 投稿タイトル (クリックで詳細ページへ遷移) */}
-                  <h3
-                    className="text-xl font-bold mb-2 cursor-pointer hover:text-blue-600 transition-colors duration-200"
-                    onClick={() => router.push(`/blog/${post.id}`)}
-                  >
-                    {post.title}
-                  </h3>
+                  {/* <h3 태그를 Link 컴포넌트로 감싸는 것이 Next.js의 권장 방식입니다. */}
+                  <Link href={`/blog/${post.id}`} passHref>
+                    <h3
+                      className="text-xl font-bold mb-2 cursor-pointer hover:text-blue-600 transition-colors duration-200"
+                      // onClick={() => router.push(`/blog/${post.id}`)} // Link 사용 시 이 onClick은 불필요
+                    >
+                      {post.title}
+                    </h3>
+                  </Link>
                   {/* 投稿内容の最初の行をプレビューとして表示 (2行まで) */}
                   <p className="text-gray-700 dark:text-gray-300 mb-2 line-clamp-2">{post.content.split('\n')[0]}</p>
                   {/* 投稿者名と作成日時 */}
@@ -526,15 +526,13 @@ export default function BlogPage() {
                   </div>
                 )}
 
-                {/* いいねボタンとカウント */}
+                {/* いいねボタンとカウント - 클릭 불가하도록 수정됨 */}
                 <div className="flex items-center mt-2 md:ml-4">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleLikeToggle(post.id);
-                    }}
-                    className="flex items-center text-red-500 hover:text-red-700 transition-colors duration-200 focus:outline-none"
-                    disabled={!isLoggedIn}
+                  {/* <button> 태그를 <span>으로 변경하고 onClick 핸들러를 제거합니다. */}
+                  <span
+                    className="flex items-center text-red-500 cursor-default" // cursor-default 추가
+                    // onClick={(e) => { e.stopPropagation(); handleLikeToggle(post.id); }} // 이 부분 제거
+                    // disabled={!isLoggedIn} // span 태그에는 disabled 속성이 없습니다.
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -545,7 +543,7 @@ export default function BlogPage() {
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                     </svg>
                     いいね
-                  </button>
+                  </span>
                   <span className="ml-2 text-gray-700 dark:text-gray-300 font-semibold">{post._count.likes}</span>
                 </div>
 

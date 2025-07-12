@@ -1,68 +1,81 @@
-// 📂 prisma/schema.prisma
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// 데이터베이스 연결 설정
-datasource db {
-  provider = "postgresql" // PostgreSQL을 사용하고 있으므로 "postgresql"로 설정
-  url      = env("DATABASE_URL") // 환경 변수에서 DB 연결 URL을 가져옴
-}
-
-// Prisma 클라이언트 생성 설정
 generator client {
   provider = "prisma-client-js"
 }
 
-model Post {
-  id        String    @id @default(uuid()) @map("id")
-  title     String
-  content   String
-  imageUrl  String?   @map("image_url") // DB 컬럼명은 image_url, Prisma 모델 필드명은 imageUrl
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) // ★★★ onDelete: Cascade 추가 및 확인
-
-  comments  Comment[]
-  likes     Like[]
-
-  @@map("post") // ★★★ 소문자 단수형 테이블 이름으로 매핑
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String    @id @default(uuid()) @map("id")
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   name      String?
   password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  posts     Post[]
+  likes     Like[]
+  comments  Comment[] // User 모델에 comments 관계 추가
+  commentLikes CommentLike[]
+  @@map("user") // 데이터베이스 테이블 이름을 'user'로 명시
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  title     String
+  content   String
+  imageUrl  String?   @map("image_url")
+  userId    String
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
-
-  posts     Post[]
-  comments  Comment[]
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes     Like[]
+  comments  Comment[] // Post 모델에 comments 관계 추가
 
-  @@map("user") // ★★★ 소문자 단수형 테이블 이름으로 매핑
+  @@map("post") // 데이터베이스 테이블 이름을 'post'로 명시
 }
 
-model Comment {
-  id        String   @id @default(uuid()) @map("id")
-  content   String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at") // 이 줄도 있는지 확인
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@map("comment")
-}
 
 model Like {
   userId    String
   postId    String
   createdAt DateTime @default(now()) @map("created_at")
 
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 삭제 시 좋아요도 삭제되도록 Cascade 추가
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@id([userId, postId]) // userId와 postId를 복합 기본 키로 지정
-  @@map("like")
+  @@id([userId, postId]) // userId와 postId의 조합을 복합 기본 키로 설정
+  @@map("like") // 테이블 이름을 'like'로 명시
+}
+model Comment {
+  id        String   @id @default(uuid()) // 고객님의 기존 uuid() 사용
+  content   String
+  userId    String
+  postId    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at") // 이 줄은 원래 잘 있습니다.
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  likes     CommentLike[] // 이 줄을 새로 추가합니다.
+
+  @@map("comment") // 데이터베이스 테이블 이름을 'comment'로 명시
+}
+
+// CommentLike 모델을 새로 추가합니다.
+model CommentLike {
+  id        String   @id @default(cuid()) // 여기는 cuid()를 사용해도 무방합니다.
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId]) // 한 사용자는 한 댓글에 한 번만 좋아요 가능
 }

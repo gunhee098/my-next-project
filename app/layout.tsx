@@ -1,9 +1,14 @@
 // 📂 app/layout.tsx
 
 import { Inter } from "next/font/google"; // Google FontsのInterをインポート
-import "./styles/globals.css"; // グローバルCSSをインポート
-import { LanguageProvider } from "@/components/LanguageProvider"; // LanguageProviderをインポート
-import { ThemeProvider } from "@/components/ThemeProvider"; // ThemeProviderをインポート
+import "./styles/globals.css"; // グローバルCSSをインポート (app/styles/globals.css 경로)
+
+// 필요에 따라 고객님 프로젝트에 실제 존재하는 컴포넌트로 변경해주세요.
+// 이 코드에서는 ThemeProvider와 LanguageProvider가 있다고 가정합니다.
+import { LanguageProvider } from "@/components/LanguageProvider"; // LanguageProvider를 임포트
+import { ThemeProvider } from "@/components/ThemeProvider"; // ThemeProvider를 임포트
+
+import { AuthProvider } from '@/hooks/useAuth'; // AuthProvider를 임포트
 
 const inter = Inter({ subsets: ["latin"] }); // Interフォントのサブセットを設定
 
@@ -28,15 +33,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // HTMLルート要素。テーマ切り替えにより`dark`クラスが自動で追加/削除されます。
-    // lang属性は日本語('ja')に設定することも可能です。
-    <html> 
+    <html lang="ja"> 
       <body className={inter.className}>
-        {/* ThemeProviderでアプリケーション全体をラップし、テーマ機能を提供 */}
         <ThemeProvider>
-          {/* LanguageProviderもThemeProvider内に配置し、言語切り替え機能を提供 */}
           <LanguageProvider>
-            {children} {/* 各ページコンポーネントがここにレンダリングされます */}
+            <AuthProvider> {/* AuthProvider로 children을 감쌉니다. */}
+              {children} {/* 各ページコンポーネントがここにレンダリングされます */}
+            </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

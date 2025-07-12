@@ -1,116 +1,112 @@
-// 📂 app/api/likes/route.ts 
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // ✅ Prismaクライアントをインポートします。
-import jwt from "jsonwebtoken"; // JWT (JSON Web Token) ライブラリを使用します。
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; // Prismaエラータイプをインポートします。
+// 📂 app/api/likes/route.ts (게시물 좋아요 생성/삭제 API 라우트)
 
-// JWT トークン デコーディング インターフェース
-interface DecodedToken {
-  id: string; // ユーザーID (PrismaのUUIDに合わせ string タイプ)
-  email: string;
-  name: string;
-  iat: number; // トークン発行時間
-  exp: number; // トークン有効期限
-}
+import { NextResponse, NextRequest } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { authenticateUser } from '@/lib/auth';
 
-// JWTを検証し、認証されたユーザー情報を取得する関数 (Liked APIで再検証)
-function getAuthenticatedUserFromToken(req: NextRequest) { // 함수 이름 변경
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+const prisma = new PrismaClient();
 
-  console.log("--- いいねAPI デバッグ (いいねAPI内部認証) ---");
-  console.log("いいねAPI: 受信したAuthorizationヘッダー:", authHeader);
-  console.log("いいねAPI: 抽出されたトークン:", token ? token.substring(0, 10) + '...' : "トークンなし");
-
-  if (!token) {
-    console.warn("いいねAPI: トークンがlikes APIに到達しませんでした。");
-    return null;
-  }
-
+// POST 요청: 좋아요 생성 (또는 토글)
+export async function POST(request: NextRequest) {
   try {
-    // JWT_SECRET 環境変数が設定されていることを再度確認
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      console.error("いいねAPI: 環境変数 JWT_SECRET が設定されていません。");
-      return null; // JWT_SECRETがない場合は認証失敗
+    const authenticatedUser = await authenticateUser(request);
+    if (!authenticatedUser) {
+      return NextResponse.json({ message: '認証が必要です。' }, { status: 401 });
     }
-    
-    const decoded = jwt.verify(token, jwtSecret);
-    console.log("いいねAPI: JWT検証完了。デコードされたユーザーID:", (decoded as any).id);
-    return decoded as DecodedToken;
-  } catch (error) {
-    console.error("いいねAPI: JWT検証失敗:", (error as Error).message);
-    return null;
-  }
-}
 
-// [POST] いいね追加/取り消し (Toggle Like) 処理ハンドラー
-export async function POST(req: NextRequest) {
-  let newLikeStatus = false;
-  try {
-    // 1. いいねAPI内部で認証されたユーザー情報を取得します。
-    const user = getAuthenticatedUserFromToken(req); // 내부 함수 호출
-    if (!user || !user.id) {
-      console.error("いいねAPI: ユーザー情報を認証できませんでした。");
-      return NextResponse.json({ error: "認証が必要です！" }, { status: 401 });
-    }
-    const userId = user.id;
+    const { postId } = await request.json();
 
-    const { postId } = await req.json();
     if (!postId) {
-      console.error("いいねAPI: postIdがリクエスト本文にありません。");
-      return NextResponse.json({ error: "postIdは必須です！" }, { status: 400 });
+      return NextResponse.json({ message: 'postId が必要です。' }, { status: 400 });
     }
 
-    const transactionResult = await prisma.$transaction(async (prisma) => {
-      const like = await prisma.like.findUnique({
+    // 이미 좋아요를 눌렀는지 확인
+    const existingLike = await prisma.like.findUnique({
+      where: {
+        userId_postId: {
+          userId: authenticatedUser.userId,
+          postId: postId,
+        },
+      },
+    });
+
+    if (existingLike) {
+      // 이미 좋아요가 있다면 삭제 (토글 기능)
+      await prisma.like.delete({
         where: {
           userId_postId: {
+            userId: authenticatedUser.userId,
             postId: postId,
-            userId: userId,
           },
         },
       });
-
-      let message = "";
-      let result;
-
-      if (like) {
-        result = await prisma.like.delete({
-          where: {
-            userId_postId: {
-              postId: postId,
-              userId: userId,
-            },
-          },
-        });
-        message = "いいねを取り消しました！";
-        newLikeStatus = false;
-      } else {
-        result = await prisma.like.create({
-          data: {
-            postId: postId,
-            userId: userId,
-          },
-        });
-        message = "いいねしました！";
-        newLikeStatus = true;
-      }
-      return { message, newLikeStatus };
-    });
-
-    console.log(`いいねAPI: ${transactionResult.message} - 投稿ID: ${postId}, ユーザーID: ${userId}`);
-    return NextResponse.json({ message: transactionResult.message, newLikeStatus: transactionResult.newLikeStatus }, { status: 200 });
+      console.log(`いいねAPI: いいねを取り消しました！ - 投稿ID: ${postId}, ユーザーID: ${authenticatedUser.userId}`);
+      return NextResponse.json({ message: 'いいねが取り消されました。', isLiked: false }, { status: 200 }); // 200 OK
+    } else {
+      // 좋아요가 없다면 생성
+      const newLike = await prisma.like.create({
+        data: {
+          userId: authenticatedUser.userId,
+          postId: postId,
+        },
+      });
+      console.log(`いいねAPI: いいねしました！ - 投稿ID: ${postId}, ユーザーID: ${authenticatedUser.userId}`);
+      return NextResponse.json({ message: 'いいねが追加されました。', isLiked: true, like: newLike }, { status: 201 }); // 201 Created
+    }
 
   } catch (error) {
-    console.error("いいねAPI: エラーが発生しました:", error);
-    if (error instanceof PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
-        console.warn("いいねAPI: 重複したいいねの試行 (Prisma P2002)。");
-        return NextResponse.json({ error: "すでにいいねされています！" }, { status: 409 });
-      }
-      return NextResponse.json({ error: `データベースエラーが発生しました: ${error.code}` }, { status: 500 });
+    console.error('いいね操作エラー (POST):', error);
+    return NextResponse.json({ message: 'いいねの操作に失敗しました。' }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// DELETE 요청: 좋아요 삭제 (명시적 삭제)
+// handleLikeToggle에서 method = isLiked ? "DELETE" : "POST"; 라고 설정했기 때문에,
+// isLiked가 true일 때 DELETE 요청이 오도록 설계되어 있습니다.
+// 따라서 DELETE 메서드를 명시적으로 구현해야 합니다.
+export async function DELETE(request: NextRequest) {
+  try {
+    const authenticatedUser = await authenticateUser(request);
+    if (!authenticatedUser) {
+      return NextResponse.json({ message: '認証が必要です。' }, { status: 401 });
     }
-    return NextResponse.json({ error: "サーバーエラーが発生しました！" }, { status: 500 });
+
+    const { postId } = await request.json();
+
+    if (!postId) {
+      return NextResponse.json({ message: 'postId が必要です。' }, { status: 400 });
+    }
+
+    const deletedLike = await prisma.like.delete({
+      where: {
+        userId_postId: {
+          userId: authenticatedUser.userId,
+          postId: postId,
+        },
+      },
+    });
+    console.log(`いいねAPI: いいねを取り消しました！ - 投稿ID: ${postId}, ユーザーID: ${authenticatedUser.userId}`);
+    
+    // 이 부분을 수정합니다: deletedLike.id 대신 userId와 postId를 반환합니다.
+    return NextResponse.json(
+      { 
+        message: 'いいねが取り消されました。', 
+        deletedUserId: deletedLike.userId,   // <--- 추가
+        deletedPostId: deletedLike.postId    // <--- 추가
+      }, 
+      { status: 200 }
+    );
+
+  } catch (error) {
+    // 좋아요가 존재하지 않아 삭제에 실패하는 경우 (P2025) 처리
+    if (error instanceof Error && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json({ message: 'いいねが見つかりませんでした。' }, { status: 404 });
+    }
+    console.error('いいね操作エラー (DELETE):', error);
+    return NextResponse.json({ message: 'いいねの操作に失敗しました。' }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

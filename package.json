@@ -10,19 +10,22 @@
   },
   "dependencies": {
     "@prisma/client": "^6.11.0",
+    "@types/js-cookie": "^3.0.6",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.6.1",
     "cross-env": "^7.0.3",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "jose": "^6.0.11",
+    "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "next": "15.2.1",
     "next-intl": "^4.1.0",
     "pg": "^8.13.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-toastify": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
