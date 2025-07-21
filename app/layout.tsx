@@ -1,16 +1,16 @@
 // 📂 app/layout.tsx
 
-import { Inter } from "next/font/google"; // Google FontsのInterをインポート
-import "./styles/globals.css"; // グローバルCSSをインポート (app/styles/globals.css 경로)
+import { Inter } from "next/font/google"; // Google FontsのInterをインポートします。
+import "./styles/globals.css"; // グローバルCSSをインポートします (app/styles/globals.css パス)。
 
-// 필요에 따라 고객님 프로젝트에 실제 존재하는 컴포넌트로 변경해주세요.
-// 이 코드에서는 ThemeProvider와 LanguageProvider가 있다고 가정합니다.
-import { LanguageProvider } from "@/components/LanguageProvider"; // LanguageProvider를 임포트
-import { ThemeProvider } from "@/components/ThemeProvider"; // ThemeProvider를 임포트
+// 必要に応じて、お客様のプロジェクトに実際に存在するコンポーネントに変更してください。
+// このコードでは、ThemeProviderとLanguageProviderが存在すると仮定しています。
+import { LanguageProvider } from "@/components/LanguageProvider"; // LanguageProviderをインポートします。
+import { ThemeProvider } from "@/components/ThemeProvider";     // ThemeProviderをインポートします。
 
-import { AuthProvider } from '@/hooks/useAuth'; // AuthProvider를 임포트
+import { AuthProvider } from '@/hooks/useAuth'; // AuthProviderをインポートします。
 
-const inter = Inter({ subsets: ["latin"] }); // Interフォントのサブセットを設定
+const inter = Inter({ subsets: ["latin"] }); // Interフォントのサブセットを設定します。
 
 /**
  * メタデータ定義
@@ -24,8 +24,8 @@ export const metadata = {
 /**
  * ルートレイアウトコンポーネント
  * アプリケーションの全てのページをラップし、共通の構造とプロバイダーを提供します。
- * @param { children: React.ReactNode } 子要素 (ページコンポーネントなど)
- * @returns React.FC
+ * @param { children: React.ReactNode } { children } - 子要素 (ページコンポーネントなど)
+ * @returns {React.FC}
  */
 export default function RootLayout({
   children,
@@ -33,11 +33,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja"> 
+    // HTMLのルート要素。言語を日本語に設定します。
+    <html lang="ja">
+      {/* bodyタグにInterフォントのクラスを適用します。 */}
       <body className={inter.className}>
+        {/* テーマプロバイダーでアプリケーション全体をラップします。 */}
         <ThemeProvider>
+          {/* 言語プロバイダーでアプリケーション全体をラップします。 */}
           <LanguageProvider>
-            <AuthProvider> {/* AuthProvider로 children을 감쌉니다. */}
+            {/* AuthProvider で children を囲みます。これにより、認証コンテキストがアプリケーション全体で利用可能になります。 */}
+            <AuthProvider>
               {children} {/* 各ページコンポーネントがここにレンダリングされます */}
             </AuthProvider>
           </LanguageProvider>

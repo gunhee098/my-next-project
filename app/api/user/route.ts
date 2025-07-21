@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         email: true,
-        createdAt: true, // 필요 시 추가
-        updatedAt: true, // 필요 시 추가
+        createdAt: true, 
+        updatedAt: true, 
       },
     });
 

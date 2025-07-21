@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@prisma/client": "^6.11.0",
-    "@types/js-cookie": "^3.0.6",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.6.1",
     "cross-env": "^7.0.3",
@@ -29,7 +28,10 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@types/jsonwebtoken": "^9.0.9",
+    "@types/estree": "^1.0.8",
+    "@types/js-cookie": "^3.0.6",
+    "@types/json-schema": "^7.0.15",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/jwt-decode": "^2.2.1",
     "@types/node": "^20",
     "@types/pg": "^8.11.11",

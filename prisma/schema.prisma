@@ -1,81 +1,88 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Prisma クライアントを生成するための設定
 generator client {
   provider = "prisma-client-js"
 }
 
+// データベース接続の設定
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "postgresql" // PostgreSQLを使用
+  url      = env("DATABASE_URL") // 環境変数からデータベースURLを取得
 }
 
+// User モデルの定義
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  password  String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  posts     Post[]
-  likes     Like[]
-  comments  Comment[] // User 모델에 comments 관계 추가
-  commentLikes CommentLike[]
-  @@map("user") // 데이터베이스 테이블 이름을 'user'로 명시
+  id            String        @id @default(uuid()) // UUID形式のID、主キー
+  email         String        @unique // ユニークなメールアドレス
+  name          String? // ユーザー名 (オプション)
+  password      String // ハッシュ化されたパスワード
+  createdAt     DateTime      @default(now()) @map("created_at") // 作成日時 (created_atにマップ)
+  updatedAt     DateTime      @updatedAt @map("updated_at") // 更新日時 (updated_atにマップ)
+  posts         Post[] // このユーザーが作成した投稿とのリレーション
+  likes         Like[] // このユーザーがいいねした投稿とのリレーション
+  comments      Comment[] // このユーザーが作成したコメントとのリレーション
+  commentLikes  CommentLike[] // このユーザーがいいねしたコメントとのリレーション
+
+  @@map("user") // データベーステーブル名を 'user' として明示
 }
 
+// Post モデルの定義
 model Post {
-  id        String    @id @default(uuid())
-  title     String
-  content   String
-  imageUrl  String?   @map("image_url")
-  userId    String
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes     Like[]
-  comments  Comment[] // Post 모델에 comments 관계 추가
+  id        String    @id @default(uuid()) // UUID形式のID、主キー
+  title     String // 投稿タイトル
+  content   String // 投稿内容
+  imageUrl  String?   @map("image_url") // 画像のURL (オプション、image_urlにマップ)
+  userId    String // 投稿を作成したユーザーのID
+  createdAt DateTime  @default(now()) @map("created_at") // 作成日時 (created_atにマップ)
+  updatedAt DateTime  @updatedAt @map("updated_at") // 更新日時 (updated_atにマップ)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) // Userモデルとのリレーション。ユーザー削除時に投稿も削除
+  likes     Like[] // この投稿に対するいいねとのリレーション
+  comments  Comment[] // この投稿に対するコメントとのリレーション
 
-  @@map("post") // 데이터베이스 테이블 이름을 'post'로 명시
+  @@map("post") // データベーステーブル名を 'post' として明示
 }
 
-
-
+// Like モデルの定義 (投稿へのいいね)
 model Like {
-  userId    String
-  postId    String
-  createdAt DateTime @default(now()) @map("created_at")
+  userId    String // いいねをしたユーザーのID
+  postId    String // いいねされた投稿のID
+  createdAt DateTime @default(now()) @map("created_at") // いいねが作成された日時 (created_atにマップ)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 삭제 시 좋아요도 삭제되도록 Cascade 추가
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Userモデルとのリレーション。ユーザー削除時にいいねも削除
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade) // Postモデルとのリレーション。投稿削除時にいいねも削除
 
-  @@id([userId, postId]) // userId와 postId의 조합을 복합 기본 키로 설정
-  @@map("like") // 테이블 이름을 'like'로 명시
+  @@id([userId, postId]) // userIdとpostIdの組み合わせを複合主キーとして設定
+  @@map("like") // データベーステーブル名を 'like' として明示
 }
+
+// Comment モデルの定義
 model Comment {
-  id        String   @id @default(uuid()) // 고객님의 기존 uuid() 사용
-  content   String
-  userId    String
-  postId    String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at") // 이 줄은 원래 잘 있습니다.
+  id        String      @id @default(uuid()) // UUID形式のID、主キー (お客様の既存のuuid()を使用)
+  content   String // コメントの内容
+  userId    String // コメントを作成したユーザーのID
+  postId    String // コメントされた投稿のID
+  createdAt DateTime    @default(now()) @map("created_at") // 作成日時 (created_atにマップ)
+  updatedAt DateTime    @updatedAt @map("updated_at") // 更新日時 (updated_atにマップ)
 
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  likes     CommentLike[] // 이 줄을 새로 추가합니다.
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade) // Userモデルとのリレーション
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade) // Postモデルとのリレーション
+  likes     CommentLike[] // このコメントに対するいいねとのリレーション
 
-  @@map("comment") // 데이터베이스 테이블 이름을 'comment'로 명시
+  @@map("comment") // データベーステーブル名を 'comment' として明示
 }
 
-// CommentLike 모델을 새로 추가합니다.
+// CommentLike モデルの定義 (コメントへのいいね)
 model CommentLike {
-  id        String   @id @default(cuid()) // 여기는 cuid()를 사용해도 무방합니다.
-  userId    String
-  commentId String
-  createdAt DateTime @default(now())
+  id        String   @id @default(cuid()) // UUID形式のID、主キー (ここではcuid()を使用しても問題ありません)
+  userId    String // いいねをしたユーザーのID
+  commentId String // いいねされたコメントのID
+  createdAt DateTime @default(now()) // いいねが作成された日時
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) // Userモデルとのリレーション
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade) // Commentモデルとのリレーション
 
-  @@unique([userId, commentId]) // 한 사용자는 한 댓글에 한 번만 좋아요 가능
+  @@unique([userId, commentId]) // 一人のユーザーは一つのコメントに一度だけいいね可能 (複合ユニークキー)
+  @@map("comment_like") // データベーステーブル名を 'comment_like' として明示
 }
