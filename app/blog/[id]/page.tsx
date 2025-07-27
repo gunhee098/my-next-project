@@ -6,6 +6,15 @@ import React, { useEffect, useState, FormEvent, useCallback, use } from "react";
 import { useRouter } from "next/navigation"; // Next.jsのルーターフックをインポートします。
 import Link from "next/link"; // Next.jsのLinkコンポーネントをインポートします。
 import { useAuth } from "@/hooks/useAuth"; // useAuth フックをインポートします。
+import { useLang } from "@/components/LanguageProvider"; // ✅ useLang フックをインポートします。
+import en from "@/locales/en.json"; // ✅ 英語のロケールデータをインポートします。
+import ja from "@/locales/ja.json"; // ✅ 日本語のロケールデータをインポートします。
+
+// ✅ next-themesのuseThemeフックをインポートします。
+import { useTheme } from "@/components/ThemeProvider"; // テーマプロバイダーからuseThemeフックをインポートします。
+// ✅ ThemeToggleButtonコンポーネントをインポートします。
+import ThemeToggleButton from "@/components/ThemeToggleButton";
+
 
 // 投稿データの型定義
 interface Post {
@@ -75,6 +84,13 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const { user, loading: authLoading, checkAuth } = useAuth();
   const router = useRouter(); // Next.jsルーターのインスタンス
 
+  // ✅ useLang フックから言語設定を取得し、辞書を選択します。
+  const { lang, setLang } = useLang();
+  const dict = lang === "ja" ? ja : en;
+
+  // ✅ useThemeフックを使用して現在のテーマ状態を取得します。
+  const { theme,  } = useTheme();
+
   // 投稿データを取得する関数
   const fetchPost = useCallback(async () => {
     setLoading(true); // ローディング状態を開始
@@ -94,24 +110,24 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーとしてログインページにリダイレクトします。
         if (res.status === 401) {
-          setError("認証が必要です。ログインしてください。");
+          setError(dict.authRequired); // ✅ 翻訳されたメッセージを使用
           router.push("/");
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`投稿の取得に失敗しました: ${res.statusText}`);
+        throw new Error(`${dict.failedToFetchPost}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
       }
       const data = await res.json(); // レスポンスデータをJSONとしてパース
       setPost(data);                  // 投稿データを状態に設定
       setLikeCount(data._count.likes); // いいねの数を設定
     } catch (err) {
       // エラーが発生した場合、エラーメッセージを設定し、コンソールにエラーを出力します。
-      setError(err instanceof Error ? err.message : "投稿の取得中にエラーが発生しました。");
+      setError(err instanceof Error ? err.message : dict.errorFetchingPostUnknown); // ✅ 翻訳されたメッセージを使用
       console.error("投稿の取得エラー:", err);
     } finally {
       setLoading(false); // ローディング状態を終了
     }
-  }, [id, router]); // idとrouterが変更された場合にのみ関数を再作成
+  }, [id, router, dict]); // ✅ dictを依存性配列に追加し、言語変更時に再実行
 
   // いいね状態を確認する関数 - エラー処理を改善
   const checkLikeStatus = useCallback(async () => {
@@ -134,12 +150,12 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 403 Forbidden エラーの処理を改善
         if (res.status === 403) {
-          console.log("[LikesStatus API] ログインが必要か、ユーザーIDが不一致です。");
+          console.log(dict.likesStatusAuthNeededOrMismatch); // ✅ 翻訳されたメッセージを使用
           setIsLiked(false); // いいね状態をfalseに設定
           return;
         }
         // その他のAPIエラーの場合、コンソールにエラーを出力し、いいね状態をfalseに設定します。
-        console.error("いいね状態の取得に失敗しました:", res.statusText);
+        console.error(dict.failedToGetLikeStatus, res.statusText); // ✅ 翻訳されたメッセージを使用
         setIsLiked(false);
         return;
       }
@@ -147,10 +163,10 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       setIsLiked(data.isLiked);     // いいね状態を更新
     } catch (err) {
       // エラーが発生した場合、コンソールにエラーを出力し、いいね状態をfalseに設定します。
-      console.error("いいね状態の確認エラー:", err);
+      console.error(dict.errorCheckingLikeStatus, err); // ✅ 翻訳されたメッセージを使用
       setIsLiked(false);
     }
-  }, [id, user]); // userが変更された場合にのみ関数を再作成
+  }, [id, user, dict]); // ✅ dictを依存性配列に追加し、言語変更時に再実行
 
   // コメントリストを取得する関数
   const fetchComments = useCallback(async () => {
@@ -169,18 +185,18 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       });
       if (!res.ok) {
         // APIエラーの場合、エラーをスローします。
-        throw new Error(`コメントの取得に失敗しました: ${res.statusText}`);
+        throw new Error(`${dict.failedToFetchComments}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
       }
       const data = await res.json(); // レスポンスデータをJSONとしてパース
       setComments(data);             // コメントリストを状態に設定
     } catch (err) {
       // エラーが発生した場合、コンソールにエラーを出力し、エラーメッセージを設定します。
-      console.error("コメントの取得エラー:", err);
-      setError(err instanceof Error ? err.message : "コメントの取得中にエラーが発生しました。");
+      console.error(dict.errorFetchingComments, err); // ✅ 翻訳されたメッセージを使用
+      setError(err instanceof Error ? err.message : dict.errorFetchingCommentsUnknown); // ✅ 翻訳されたメッセージを使用
     } finally {
       setCommentLoading(false); // コメントローディング状態を終了
     }
-  }, [id]); // idが変更された場合にのみ関数を再作成
+  }, [id, dict]); // ✅ dictを依存性配列に追加し、言語変更時に再実行
 
   // ✅ ユーザー変更時に強制的にコンポーネントを再レンダリングするためのキーを生成
   const userKey = user?.id || 'anonymous'; // userがnullの場合は'anonymous'を使用
@@ -203,32 +219,32 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     if (user && user.id) {
       checkLikeStatus();
     }
-  }, [userKey, authLoading, fetchPost, fetchComments, checkLikeStatus, user]); // userKeyを依存性配列に追加してユーザー変更時に再実行
+  }, [userKey, authLoading, fetchPost, fetchComments, checkLikeStatus, user]); // userKeyを依存性配列に追加し、ユーザー変更時に再実行
 
-  // ✅ いいね状態のみを確認する別の useEffect (ユーザー情報が変更された際に特に重要)
-  // これにより、user.id の変化に敏感に反応し、最新のいいね状態を反映させます。
+  // ✅ いいね状態のみを確認する別のuseEffect (ユーザー情報が変更されるときに特に重要)
+  // これにより、user.idの変化に敏感に反応し、最新のいいね状態を反映します。
   useEffect(() => {
     if (!authLoading && user && user.id) {
       checkLikeStatus();
     }
-  }, [user?.id, authLoading, checkLikeStatus]); // user.id, authLoading, checkLikeStatus が変更された場合に実行
+  }, [user?.id, authLoading, checkLikeStatus]); // user.id, authLoading, checkLikeStatus が変更されるときに実行
 
   // 投稿を削除するハンドラー
   const handleDelete = async () => {
     // ログインユーザーが投稿の作成者でない場合、警告を表示して処理を中断します。
     if (!user || user.id !== post?.userId) {
-      alert("この投稿を削除する権限がありません。");
+      alert(dict.noPermissionToDeletePost); // ✅ 翻訳されたメッセージを使用
       return;
     }
     // 削除確認のダイアログを表示します。
-    if (!confirm("本当にこの投稿を削除しますか？")) {
+    if (!confirm(dict.confirmDeletePost)) { // ✅ 翻訳されたメッセージを使用
       return;
     }
 
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        alert("認証が必要です。");
+        alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
         router.push("/");
         return;
       }
@@ -242,18 +258,18 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーを警告し、ログインページにリダイレクトします。
         if (res.status === 401) {
-          alert("認証が必要です。");
+          alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
           router.push("/");
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`投稿の削除に失敗しました: ${res.statusText}`);
+        throw new Error(`${dict.deleteFail}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
       }
-      alert("投稿が削除されました。"); // 削除成功メッセージ
+      alert(dict.postDeletedSuccess); // ✅ 翻訳されたメッセージを使用
       router.push("/blog"); // 投稿一覧ページにリダイレクト
     } catch (err) {
       // エラーが発生した場合、アラートとコンソールにエラーを出力します。
-      alert(`投稿の削除中にエラーが発生しました: ${err instanceof Error ? err.message : "不明なエラー"}`);
+      alert(`${dict.errorDeletingPost}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
       console.error("投稿の削除エラー:", err);
     }
   };
@@ -263,7 +279,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        console.error("トークンが見つかりません。");
+        console.error(dict.tokenNotFound); // ✅ 翻訳されたメッセージを使用
         return;
       }
       // いいねAPIを呼び出します。
@@ -280,11 +296,11 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーをコンソールに出力します。
         if (res.status === 401) {
-          console.error("認証エラー: トークンが無効です。");
+          console.error(dict.authErrorInvalidToken); // ✅ 翻訳されたメッセージを使用
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`いいねの操作に失敗しました: ${res.statusText}`);
+        throw new Error(`${dict.failedToOperateLike}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
       }
 
       const data = await res.json(); // レスポンスデータをJSONとしてパース
@@ -293,8 +309,8 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
     } catch (err) {
       // エラーが発生した場合、コンソールとアラートにエラーを出力します。
-      console.error("いいね操作エラー:", err);
-      alert(`いいねの操作中にエラーが発生しました: ${err instanceof Error ? err.message : "不明なエラー"}`);
+      console.error(dict.likeOperationError, err); // ✅ 翻訳されたメッセージを使用
+      alert(`${dict.errorOperatingLike}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
     }
   };
 
@@ -303,7 +319,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     e.preventDefault(); // フォームのデフォルト送信を防ぎます。
     // コメント内容が空の場合、警告を表示して処理を中断します。
     if (!newCommentContent.trim()) {
-      alert("コメント内容は空にできません。");
+      alert(dict.commentCannotBeEmpty); // ✅ 翻訳されたメッセージを使用
       return;
     }
 
@@ -311,7 +327,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        console.error("トークンが見つかりません。");
+        console.error(dict.tokenNotFound); // ✅ 翻訳されたメッセージを使用
         setCommentLoading(false);
         return;
       }
@@ -331,12 +347,12 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーをコンソールに出力します。
         if (res.status === 401) {
-          console.error("認証エラー: トークンが無効です。");
+          console.error(dict.authErrorInvalidToken); // ✅ 翻訳されたメッセージを使用
           setCommentLoading(false);
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`コメントの投稿に失敗しました: ${res.statusText}`);
+        throw new Error(`${dict.failedToPostComment}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
       }
 
       setNewCommentContent(""); // コメント入力フィールドをクリア
@@ -345,8 +361,8 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
     } catch (err) {
       // エラーが発生した場合、コンソールとアラートにエラーを出力します。
-      console.error("コメント投稿エラー:", err);
-      alert(`コメントの投稿中にエラーが発生しました: ${err instanceof Error ? err.message : "不明なエラー"}`);
+      console.error(dict.commentPostError, err); // ✅ 翻訳されたメッセージを使用
+      alert(`${dict.errorPostingComment}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
     } finally {
       setCommentLoading(false); // コメント送信ローディング状態を終了
     }
@@ -355,14 +371,14 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   // ✅ コメント削除ハンドラー (本人が作成したコメントのみ削除可能)
   const handleCommentDelete = async (commentId: string) => {
     // 削除確認のダイアログを表示します。
-    if (!confirm("本当にこのコメントを削除しますか？")) {
+    if (!confirm(dict.confirmDeleteComment)) { // ✅ 翻訳されたメッセージを使用
       return;
     }
 
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        alert("認証が必要です。");
+        alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
         return;
       }
 
@@ -377,41 +393,56 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // APIエラーの種類に応じた処理
         if (res.status === 401) {
-          alert("認証が必要です。");
+          alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
           return;
         }
         if (res.status === 403) { // 権限なしエラー (Forbidden)
-          alert("このコメントを削除する権限がありません。");
+          alert(dict.noPermissionToDeleteComment); // ✅ 翻訳されたメッセージを使用
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`コメントの削除に失敗しました: ${res.statusText}`);
+        throw new Error(`${dict.failedToDeleteComment}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
       }
 
       // 削除成功時にコメントリストを更新
       await fetchComments();
-      alert("コメントが削除されました。"); // 削除成功メッセージ
+      alert(dict.commentDeletedSuccess); // ✅ 翻訳されたメッセージを使用
 
     } catch (err) {
       // エラーが発生した場合、コンソールとアラートにエラーを出力します。
-      console.error("コメント削除エラー:", err);
-      alert(`コメントの削除中にエラーが発生しました: ${err instanceof Error ? err.message : "不明なエラー"}`);
+      console.error(dict.commentDeleteError, err); // ✅ 翻訳されたメッセージを使用
+      alert(`${dict.errorDeletingComment}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
     }
   };
 
   // ローディング中の表示
   if (loading || authLoading) {
-    return <div className="text-center py-8">読み込み中...</div>;
+    // ✅ ローディング画面にもダークモードクラスを適用します。
+    return (
+      <div className={`text-center py-8 min-h-screen flex items-center justify-center ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+        {dict.loading}...
+      </div>
+    );
   }
 
   // エラー発生時の表示
   if (error) {
-    return <div className="text-center text-red-500 py-8">エラー: {error}</div>;
+    // ✅ エラー画面にもダークモードクラスを適用します。
+    return (
+      <div className={`text-center text-red-500 py-8 min-h-screen flex items-center justify-center ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+        {dict.error}: {error}
+      </div>
+    );
   }
 
   // 投稿が見つからない場合の表示
   if (!post) {
-    return <div className="text-center py-8">投稿が見つかりませんでした。</div>;
+    // ✅ 投稿なし画面にもダークモードクラスを適用します。
+    return (
+      <div className={`text-center py-8 min-h-screen flex items-center justify-center ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+        {dict.postNotFound}
+      </div>
+    );
   }
 
   // ✅ 現在のユーザーが投稿の作成者であるかを確認 (UIの再レンダリングを保証)
@@ -419,10 +450,33 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
   // コンポーネントのレンダリング
   return (
-    // ✅ userKey を key プロパティとして使用し、ユーザーが変更された場合にコンポーネントを強制的に再レンダリングします。
-    <div className="container mx-auto p-4" key={userKey}>
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h1 className="text-4xl font-bold mb-4 text-gray-800">{post.title}</h1>
+    // ✅ 最上位のdivにダークモードクラスを適用: theme状態に応じて背景色とテキスト色を動的に変更します。
+    <div className={`container mx-auto p-4 min-h-screen ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`} key={userKey}>
+      {/* ✅ 言語切り替えボタンとダークモードトグルボタンを追加 */}
+      <div className="absolute top-4 right-4 z-10 flex items-center space-x-4">
+        <div className="inline-flex shadow rounded overflow-hidden">
+          <button
+            onClick={() => setLang("en")}
+            className={`px-3 py-1 font-medium ${
+              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
+            }`}
+          >
+            EN
+          </button>
+          <button
+            onClick={() => setLang("ja")}
+            className={`px-3 py-1 font-medium ${
+              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
+            }`}
+          >
+            JP
+          </button>
+        </div>
+        <ThemeToggleButton /> {/* ✅ ダークモードトグルボタンコンポーネント */}
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6"> {/* ✅ ダークモード背景色およびテキスト色 */}
+        <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">{post.title}</h1> {/* ✅ ダークモードテキスト色 */}
         {post.imageUrl && (
           <div className="mb-4">
             <img
@@ -434,20 +488,20 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
                 const target = e.target as HTMLImageElement;
                 target.onerror = null; // 無限ループを防ぐため、イベントハンドラーを削除
                 target.src = "/placeholder-image.png"; // 代替画像を表示
-                target.alt = "画像読み込みエラー"; // 代替テキストを設定
+                target.alt = dict.imageLoadError; // ✅ 翻訳されたメッセージを使用
               }}
             />
           </div>
         )}
-        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed mb-6">{post.content}</p>
-        <div className="flex justify-between items-center text-sm text-gray-500 border-t pt-4">
-          <span>作成者: {post.username}</span>
-          <span>投稿日: {new Date(post.createdAt).toLocaleDateString()}</span>
+        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed mb-6">{post.content}</p> {/* ✅ ダークモードテキスト色 */}
+        <div className="flex justify-between items-center text-sm text-gray-500 border-t pt-4 dark:border-gray-700"> {/* ✅ ダークモード境界線色 */}
+          <span className="dark:text-gray-400">{dict.author}: {post.username}</span> {/* ✅ ダークモードテキスト色 */}
+          <span className="dark:text-gray-400">{dict.postedOn}: {new Date(post.createdAt).toLocaleDateString()}</span> {/* ✅ ダークモードテキスト色 */}
           <div className="flex items-center space-x-4">
             <button
               onClick={handleLikeToggle} // いいねトグルハンドラーを呼び出し
               className={`flex items-center text-lg ${isLiked ? 'text-red-500' : 'text-gray-400'} hover:text-red-600 transition-colors`}
-              aria-label={isLiked ? "いいねを取り消す" : "いいねする"} // アクセシビリティのためのラベル
+              aria-label={isLiked ? dict.unlike : dict.like} // ✅ 翻訳されたメッセージを使用
             >
               ❤️ <span className="ml-1 text-sm">{likeCount}</span> {/* いいね数表示 */}
             </button>
@@ -464,30 +518,30 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
               href={`/blog/${id}/edit`}
               className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
-              編集
+              {dict.edit} {/* ✅ 翻訳されたメッセージを使用 */}
             </Link>
             <button
               onClick={handleDelete} // 削除ハンドラーを呼び出し
               className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
             >
-              削除
+              {dict.delete} {/* ✅ 翻訳されたメッセージを使用 */}
             </button>
           </div>
         )}
       </div>
 
       {/* コメントセクション */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">コメント ({comments.length})</h2>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"> {/* ✅ ダークモード背景色 */}
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">{dict.comments} ({comments.length})</h2> {/* ✅ ダークモードテキスト色 */}
 
         {/* 新しいコメント投稿フォーム */}
         <form onSubmit={handleCommentSubmit} className="mb-6">
           <textarea
             value={newCommentContent} // コメント内容の状態にバインド
             onChange={(e) => setNewCommentContent(e.target.value)} // 入力値の変更を更新
-            placeholder="コメントを入力してください..."
+            placeholder={dict.enterCommentPlaceholder} // ✅ 翻訳されたメッセージを使用
             rows={3}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder-gray-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder-gray-500 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" // ✅ ダークモード入力フィールドスタイル
             required // 必須入力
             disabled={commentLoading} // コメント送信中は無効化
           ></textarea>
@@ -496,35 +550,35 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
             className="mt-3 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={commentLoading || !newCommentContent.trim()} // ローディング中または内容が空の場合はボタンを無効化
           >
-            {commentLoading ? "送信中..." : "コメントを投稿"}
+            {commentLoading ? dict.sending : dict.postComment} {/* ✅ 翻訳されたメッセージを使用 */}
           </button>
         </form>
 
         {/* コメントリスト */}
         {commentLoading && comments.length === 0 ? (
-          <div className="text-center text-gray-500">コメントを読み込み中...</div>
+          <div className="text-center text-gray-500 dark:text-gray-400">{dict.loadingComments}...</div> // ✅ ダークモードテキスト色
         ) : comments.length === 0 ? (
-          <div className="text-center text-gray-500">まだコメントはありません。</div>
+          <div className="text-center text-gray-500 dark:text-gray-400">{dict.noCommentsYet}.</div> // ✅ ダークモードテキスト色
         ) : (
           <div className="space-y-4">
             {comments.map((comment) => (
-              <div key={comment.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600"> {/* ✅ ダークモード背景色および境界線 */}
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold text-gray-800">{comment.user.name || 'Unknown User'}</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{comment.user.name || dict.unknownUser}</span> {/* ✅ ダークモードテキスト色 */}
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {new Date(comment.createdAt).toLocaleDateString()} {new Date(comment.createdAt).toLocaleTimeString()}
                   </span>
                 </div>
-                <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.content}</p> {/* ✅ ダークモードテキスト色 */}
 
                 {/* ✅ コメント削除ボタン - 本人のコメントのみ表示 - 強化された条件付きレンダリング */}
                 {user && user.id === comment.userId && (
                   <div className="mt-2 text-right">
                     <button
                       onClick={() => handleCommentDelete(comment.id)} // コメント削除ハンドラーを呼び出し
-                      className="text-sm text-red-500 hover:text-red-700 hover:underline transition-colors px-2 py-1 border border-red-300 rounded"
+                      className="text-sm text-red-500 hover:text-red-700 hover:underline transition-colors px-2 py-1 border border-red-300 rounded dark:border-red-600" // ✅ ダークモード境界線およびボタン色
                     >
-                      削除
+                      {dict.delete} {/* ✅ 翻訳されたメッセージを使用 */}
                     </button>
                   </div>
                 )}
@@ -536,7 +590,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
       <div className="mt-6 text-center">
         <Link href="/blog" className="text-blue-500 hover:underline">
-          ← 投稿一覧に戻る
+          ← {dict.backToPostList} {/* ✅ 翻訳されたメッセージを使用 */}
         </Link>
       </div>
     </div>
