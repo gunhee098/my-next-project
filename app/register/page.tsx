@@ -7,7 +7,8 @@ import { useLang } from "@/components/LanguageProvider"; // LanguageProviderか�
 import en from "@/locales/en.json"; // 英語の辞書ファイルをインポートします。
 import ja from "@/locales/ja.json"; // 日本語の辞書ファイルをインポートします。
 
-import { useTheme } from "@/components/ThemeProvider"; // ★ useTheme フックをインポートします。
+import { useTheme } from "@/components/ThemeProvider"; // useTheme フックをインポートします。
+import ThemeToggleButton from "@/components/ThemeToggleButton"; // テーマ切り替えボタンコンポーネントをインポートします。
 
 /**
  * ユーザー登録ページコンポーネント
@@ -29,7 +30,7 @@ export default function RegisterPage() {
   // 現在の言語に基づいて使用する辞書オブジェクトを選択します。
   const dict = lang === "ja" ? ja : en;
 
-  const { theme } = useTheme(); // ★ useTheme フックで現在のテーマ状態を取得します。
+  const { theme } = useTheme(); // useTheme フックで現在のテーマ状態を取得します。
 
   /**
    * ユーザー登録処理を行う非同期ハンドラー関数。
@@ -69,49 +70,70 @@ export default function RegisterPage() {
   };
 
   return (
-    // ページ全体のコンテナ。中央寄せ、背景色、相対位置指定
-    // ★ テーマ状態にD応じて dark クラスを適用し、Tailwind のダークモードユーティリティを有効にします。
-    <div className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'dark' : ''} bg-gray-100 dark:bg-gray-900 relative`}>
-      {/* 言語切り替えボタン - 右上固定 */}
-      <div className="absolute top-4 right-4">
-        <div className="inline-flex shadow rounded overflow-hidden">
-          {/* 英語切り替えボタン */}
+    // 最上位のコンテナ。テーマ状態に応じて背景グラデーションとテキスト色を調整
+    <div className={`flex items-center justify-center min-h-screen transition-all duration-300 ${
+      theme === 'dark'
+        ? 'dark bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+        : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+    }`}>
+      {/* 言語切り替えとテーマトグルボタンのコンテナ */}
+      <div className="absolute top-6 right-6 flex items-center space-x-4">
+        {/* 言語選択ボタン */}
+        <div className={`inline-flex rounded-xl overflow-hidden shadow-lg ${
+          theme === 'dark'
+            ? 'bg-gray-800/80 backdrop-blur-sm border border-gray-700/50'
+            : 'bg-white/80 backdrop-blur-sm border border-gray-200/50'
+        }`}>
           <button
             onClick={() => setLang("en")}
-            className={`px-3 py-1 font-medium ${
+            className={`px-4 py-2 font-medium transition-all duration-200 ${
               lang === "en"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white" // ★ ダークモードクラスを追加
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                : theme === 'dark'
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
             }`}
           >
             EN
           </button>
-          {/* 日本語切り替えボタン */}
           <button
             onClick={() => setLang("ja")}
-            className={`px-3 py-1 font-medium ${
+            className={`px-4 py-2 font-medium transition-all duration-200 ${
               lang === "ja"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white" // ★ ダークモードクラスを追加
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                : theme === 'dark'
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
             }`}
           >
             JP
           </button>
         </div>
+        {/* ダークモード切り替えボタンコンポーネント */}
+        <ThemeToggleButton />
       </div>
 
-      {/* 登録フォームのコンテナ */}
-      {/* ★ ダークモードクラスを追加 */}
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-96">
-        {/* 登録フォームのタイトル (辞書から取得) */}
-        {/* ★ ダークモードクラスを追加 */}
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">{dict.registerTitle}</h2>
+      {/* 등록フォームカード */}
+      <div className={`p-8 rounded-2xl shadow-2xl w-full max-w-md transition-all duration-300 ${
+        theme === 'dark'
+          ? 'bg-gray-800/60 border border-gray-700/50'
+          : 'bg-white/80 border border-gray-200/50'
+      }`}>
+        <h2 className={`text-3xl font-bold mb-8 text-center bg-gradient-to-r ${
+          theme === 'dark'
+            ? 'from-blue-400 to-purple-400'
+            : 'from-blue-600 to-purple-600'
+        } bg-clip-text text-transparent`}>
+          {dict.registerTitle}
+        </h2>
 
         {/* メッセージ表示領域 (message stateに基づいて条件的に表示) */}
         {message && (
           <div
-            className={`mb-4 px-4 py-3 rounded text-center ${
-              message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            className={`mb-6 px-4 py-3 rounded-xl text-center transition-all duration-200 ${
+              message.type === "success" 
+                ? 'bg-green-100 text-green-700 border border-green-200' 
+                : 'bg-red-100 text-red-700 border border-red-200'
             }`}
             role="alert" // スクリーンリーダーのためのロール
           >
@@ -119,63 +141,66 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {/* 登録フォーム */}
-        <form onSubmit={handleRegister} className="space-y-5">
+        <form onSubmit={handleRegister} className="space-y-6">
           <div>
-            {/* 名前入力フィールド (プレースホルダーも辞書から取得) */}
             <input
               type="text"
               placeholder={dict.namePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              // ★ 入力フィールドにダークモードクラスを追加
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
-              required // 必須入力
+              className={`w-full px-5 py-3 rounded-xl border transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20'
+                  : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+              } focus:outline-none`}
+              required
             />
           </div>
           <div>
-            {/* メールアドレス入力フィールド (プレースホルダーも辞書から取得) */}
             <input
               type="email"
               placeholder={dict.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              // ★ 入力フィールドにダークモードクラスを追加
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
-              required // 必須入力
+              className={`w-full px-5 py-3 rounded-xl border transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20'
+                  : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+              } focus:outline-none`}
+              required
             />
           </div>
           <div>
-            {/* パスワード入力フィールド (プレースホルダーも辞書から取得) */}
             <input
               type="password"
               placeholder={dict.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              // ★ 入力フィールドにダークモードクラスを追加
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
-              required // 必須入力
+              className={`w-full px-5 py-3 rounded-xl border transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20'
+                  : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+              } focus:outline-none`}
+              required
             />
           </div>
-          {/* 登録ボタン (テキストも辞書から取得) */}
           <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md transition"
+            className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             {dict.registerButton}
           </button>
         </form>
-        {/* 既にアカウントがある場合のプロンプトとログインリンク (テキストも辞書から取得) */}
-        {/* ★ ダークモードクラスを追加 */}
-        <p className="text-center mt-4 text-gray-600 dark:text-gray-300">
+        <p className={`text-center mt-6 text-sm ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+        }`}>
           {dict.alreadyAccountPrompt}{" "}
-          <a href="/" className="text-blue-500 font-bold hover:underline">
+          <a
+            href="/"
+            className={`font-bold hover:underline ${
+              theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'
+            }`}
+          >
             {dict.loginLink}
           </a>
         </p>
