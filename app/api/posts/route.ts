@@ -199,7 +199,8 @@ export async function POST(req: NextRequest) {
     const { userId } = authResult; // 認証されたユーザーIDを取得
 
     // リクエストボディからタイトル、内容、画像URLを取得します。
-    const { title, content, imageUrl } = await req.json();
+    //const { title, content, imageUrl } = await req.json();
+    const { title, content, image_url } = await req.json();
 
     // タイトルまたは内容が欠けている場合のバリデーション。
     if (!title || !content) {
@@ -211,7 +212,7 @@ export async function POST(req: NextRequest) {
       data: {
         title, // 投稿タイトル
         content, // 投稿内容
-        imageUrl, // 画像URL（オプション）
+        imageUrl: image_url, // 画像URL（オプション）
         userId: userId, // ユーザーID
       },
     });

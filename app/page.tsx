@@ -1,12 +1,12 @@
 // 📂 app/page.tsx (New Login Page at Root)
-"use client";
+"use client"; // このファイルがクライアントコンポーネントであることを宣言します。
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useLang } from "@/components/LanguageProvider"; // 言語プロバイダーをインポート
+import { useRouter } from "next/navigation"; // Next.jsルーターフックをインポートします。
+import { useLang } from "@/components/LanguageProvider"; // 言語プロバイダーをインポートします。
 
-import { useTheme } from "@/components/ThemeProvider"; // テーマプロバイダーからuseThemeフックをインポート
-import ThemeToggleButton from "@/components/ThemeToggleButton"; // テーマ切り替えボタンコンポーネントをインポート
+import { useTheme } from "@/components/ThemeProvider"; // テーマプロバイダーからuseThemeフックをインポートします。
+import ThemeToggleButton from "@/components/ThemeToggleButton"; // テーマ切り替えボタンコンポーネントをインポートします。
 
 import en from "@/locales/en.json"; // 英語ロケールデータ
 import ja from "@/locales/ja.json"; // 日本語ロケールデータ
@@ -19,64 +19,77 @@ import ja from "@/locales/ja.json"; // 日本語ロケールデータ
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter(); // Next.jsルーターフック
+  const router = useRouter(); // Next.jsルーターフックを初期化します。
 
-  const { lang, setLang } = useLang(); // 言語状態と設定関数を取得
-  const dict = lang === "ja" ? ja : en; // 現在の言語に応じた辞書データを設定
+  const { lang, setLang } = useLang(); // 言語状態と設定関数を取得します。
+  const dict = lang === "ja" ? ja : en; // 現在の言語に応じた辞書データを設定します。
 
-  const { theme } = useTheme(); // 現在のテーマ状態を取得 (light/dark/undefined)
+  const { theme } = useTheme(); // 現在のテーマ状態を取得します (light/dark/undefined)。
 
   /**
    * ログイン処理ハンドラー
    * @param e フォームイベントオブジェクト
    */
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); // デフォルトのフォーム送信動作を防止
+    e.preventDefault(); // デフォルトのフォーム送信動作を防止します。
 
     try {
       const res = await fetch("/api/auth/", { // 💡 /api/auth/ でログインAPIを呼び出す
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "login", email, password }),
-        credentials: "include", // クッキーなどの認証情報をリクエストに含める
+        credentials: "include", // クッキーなどの認証情報をリクエストに含めます。
       });
 
-      const data = await res.json(); // サーバーからのJSONレスポンスを解析
+      const data = await res.json(); // サーバーからのJSONレスポンスを解析します。
 
       if (res.ok) {
-        localStorage.setItem("token", data.token); // 認証トークンをローカルストレージに保存
-        router.push("/blog"); // ログイン成功後、ブログページへリダイレクト
+        localStorage.setItem("token", data.token); // 認証トークンをローカルストレージに保存します。
+        router.push("/blog"); // ログイン成功後、ブログページへリダイレクトします。
       } else {
-        alert(data.error || dict.loginFail); // ログイン失敗メッセージを表示
+        alert(data.error || dict.loginFail); // ログイン失敗メッセージを表示します。
       }
     } catch (error) {
-      console.error("ログイン中にエラーが発生しました:", error); // エラーログを追加
-      alert(dict.serverError); // サーバーエラーメッセージを表示
+      console.error("ログイン中にエラーが発生しました:", error); // エラーログを追加します。
+      alert(dict.serverError); // サーバーエラーメッセージを表示します。
     }
   };
 
   return (
-    // 最上位のコンテナ。テーマ状態に応じて`dark`クラスを適用し、Tailwindのダークモードユーティリティを有効にする
-    <div className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'dark' : ''} bg-gray-100 dark:bg-gray-900 relative`}>
-      <div className="absolute top-4 right-4 flex items-center space-x-2">
-        {/* 言語切り替えボタン */}
-        <div className="inline-flex shadow rounded overflow-hidden">
+    // 最上位のコンテナ。テーマ状態に応じて背景グラデーションとテキスト色を調整
+    <div className={`flex items-center justify-center min-h-screen transition-all duration-300 ${
+      theme === 'dark'
+        ? 'dark bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+        : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+    }`}>
+      {/* 言語切り替えとテーマトグルボタンのコンテナ */}
+      <div className="absolute top-6 right-6 flex items-center space-x-4">
+        {/* 言語選択ボタン */}
+        <div className={`inline-flex rounded-xl overflow-hidden shadow-lg ${
+          theme === 'dark'
+            ? 'bg-gray-800/80 backdrop-blur-sm border border-gray-700/50'
+            : 'bg-white/80 backdrop-blur-sm border border-gray-200/50'
+        }`}>
           <button
             onClick={() => setLang("en")}
-            className={`px-3 py-1 font-medium ${
+            className={`px-4 py-2 font-medium transition-all duration-200 ${
               lang === "en"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                : theme === 'dark'
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
             }`}
           >
             EN
           </button>
           <button
             onClick={() => setLang("ja")}
-            className={`px-3 py-1 font-medium ${
+            className={`px-4 py-2 font-medium transition-all duration-200 ${
               lang === "ja"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                : theme === 'dark'
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
             }`}
           >
             JP
@@ -86,21 +99,31 @@ export default function LoginPage() {
         <ThemeToggleButton />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-96">
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">
+      {/* ログインフォームカード */}
+      <div className={`p-8 rounded-2xl shadow-2xl w-full max-w-md transition-all duration-300 ${
+        theme === 'dark'
+          ? 'bg-gray-800/60 border border-gray-700/50'
+          : 'bg-white/80 border border-gray-200/50'
+      }`}>
+        <h2 className={`text-3xl font-bold mb-8 text-center bg-gradient-to-r ${
+          theme === 'dark'
+            ? 'from-blue-400 to-purple-400'
+            : 'from-blue-600 to-purple-600'
+        } bg-clip-text text-transparent`}>
           {dict.loginTitle}
         </h2>
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div>
             <input
               type="email"
               placeholder={dict.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              // 入力フィールドのスタイル: ダークモードでもテキストが視認できるように設定
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              className={`w-full px-5 py-3 rounded-xl border transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20'
+                  : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+              } focus:outline-none`}
               required
             />
           </div>
@@ -110,25 +133,30 @@ export default function LoginPage() {
               placeholder={dict.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              // 入力フィールドのスタイル: ダークモードでもテキストが視認できるように設定
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
+              className={`w-full px-5 py-3 rounded-xl border transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20'
+                  : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+              } focus:outline-none`}
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg shadow-md transition"
+            className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             {dict.loginButton}
           </button>
         </form>
-        <p className="text-center mt-4 text-gray-600 dark:text-gray-300">
+        <p className={`text-center mt-6 text-sm ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+        }`}>
           {dict.noAccountPrompt}{" "}
           <a
             href="/register" // 💡 修正: /auth/register から /register へパス変更
-            className="text-blue-500 font-bold hover:underline"
+            className={`font-bold hover:underline ${
+              theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'
+            }`}
           >
             {dict.registerLink}
           </a>

@@ -2,7 +2,7 @@
 
 "use client"; // クライアントコンポーネントとして指定します。
 
-import React, { useEffect, useState, FormEvent, useCallback, use } from "react";
+import React, { useEffect, useState, FormEvent, useCallback, use, type ReactNode } from "react";
 import { useRouter } from "next/navigation"; // Next.jsのルーターフックをインポートします。
 import Link from "next/link"; // Next.jsのLinkコンポーネントをインポートします。
 import { useAuth } from "@/hooks/useAuth"; // useAuth フックをインポートします。
@@ -39,7 +39,7 @@ interface Comment {
   postId: string;
   createdAt: string;
   user: {
-    id: string;   // コメント作成者のユーザーオブジェクトのID
+    id: string;    // コメント作成者のユーザーオブジェクトのID
     name: string; // コメント作成者名
   };
 }
@@ -89,12 +89,12 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const dict = lang === "ja" ? ja : en;
 
   // ✅ useThemeフックを使用して現在のテーマ状態を取得します。
-  const { theme,  } = useTheme();
+  const { theme } = useTheme();
 
   // 投稿データを取得する関数
   const fetchPost = useCallback(async () => {
     setLoading(true); // ローディング状態を開始
-    setError(null);   // エラー状態をリセット
+    setError(null);    // エラー状態をリセット
     try {
       const token = getToken(); // ローカルストレージからトークンを取得
       if (!token) {
@@ -150,20 +150,20 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 403 Forbidden エラーの処理を改善
         if (res.status === 403) {
-          console.log(dict.likesStatusAuthNeededOrMismatch); // ✅ 翻訳されたメッセージを使用
+          console.log(dict.likesStatusAuthNeededOrMismatch); 
           setIsLiked(false); // いいね状態をfalseに設定
           return;
         }
         // その他のAPIエラーの場合、コンソールにエラーを出力し、いいね状態をfalseに設定します。
-        console.error(dict.failedToGetLikeStatus, res.statusText); // ✅ 翻訳されたメッセージを使用
+        console.error(dict.failedToGetLikeStatus, res.statusText); 
         setIsLiked(false);
         return;
       }
       const data = await res.json(); // レスポンスデータをJSONとしてパース
-      setIsLiked(data.isLiked);     // いいね状態を更新
+      setIsLiked(data.isLiked);      // いいね状態を更新
     } catch (err) {
       // エラーが発生した場合、コンソールにエラーを出力し、いいね状態をfalseに設定します。
-      console.error(dict.errorCheckingLikeStatus, err); // ✅ 翻訳されたメッセージを使用
+      console.error(dict.errorCheckingLikeStatus, err); 
       setIsLiked(false);
     }
   }, [id, user, dict]); // ✅ dictを依存性配列に追加し、言語変更時に再実行
@@ -185,14 +185,14 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       });
       if (!res.ok) {
         // APIエラーの場合、エラーをスローします。
-        throw new Error(`${dict.failedToFetchComments}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
+        throw new Error(`${dict.failedToFetchComments}: ${res.statusText}`); 
       }
       const data = await res.json(); // レスポンスデータをJSONとしてパース
       setComments(data);             // コメントリストを状態に設定
     } catch (err) {
       // エラーが発生した場合、コンソールにエラーを出力し、エラーメッセージを設定します。
-      console.error(dict.errorFetchingComments, err); // ✅ 翻訳されたメッセージを使用
-      setError(err instanceof Error ? err.message : dict.errorFetchingCommentsUnknown); // ✅ 翻訳されたメッセージを使用
+      console.error(dict.errorFetchingComments, err); 
+      
     } finally {
       setCommentLoading(false); // コメントローディング状態を終了
     }
@@ -219,7 +219,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     if (user && user.id) {
       checkLikeStatus();
     }
-  }, [userKey, authLoading, fetchPost, fetchComments, checkLikeStatus, user]); // userKeyを依存性配列に追加し、ユーザー変更時に再実行
+  }, [userKey, authLoading, fetchPost, fetchComments, checkLikeStatus, user]); 
 
   // ✅ いいね状態のみを確認する別のuseEffect (ユーザー情報が変更されるときに特に重要)
   // これにより、user.idの変化に敏感に反応し、最新のいいね状態を反映します。
@@ -233,18 +233,18 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const handleDelete = async () => {
     // ログインユーザーが投稿の作成者でない場合、警告を表示して処理を中断します。
     if (!user || user.id !== post?.userId) {
-      alert(dict.noPermissionToDeletePost); // ✅ 翻訳されたメッセージを使用
+      alert(dict.noPermissionToDeletePost); 
       return;
     }
     // 削除確認のダイアログを表示します。
-    if (!confirm(dict.confirmDeletePost)) { // ✅ 翻訳されたメッセージを使用
+    if (!confirm(dict.confirmDeletePost)) { 
       return;
     }
 
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
+        alert(dict.authRequired); 
         router.push("/");
         return;
       }
@@ -258,28 +258,33 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーを警告し、ログインページにリダイレクトします。
         if (res.status === 401) {
-          alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
+          alert(dict.authRequired); 
           router.push("/");
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`${dict.deleteFail}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
+        throw new Error(`${dict.deleteFail}: ${res.statusText}`); 
       }
-      alert(dict.postDeletedSuccess); // ✅ 翻訳されたメッセージを使用
+      alert(dict.postDeletedSuccess); 
       router.push("/blog"); // 投稿一覧ページにリダイレクト
     } catch (err) {
       // エラーが発生した場合、アラートとコンソールにエラーを出力します。
-      alert(`${dict.errorDeletingPost}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
+      alert(`${dict.errorDeletingPost}: ${err instanceof Error ? err.message : dict.unknownError}`); 
       console.error("投稿の削除エラー:", err);
     }
   };
 
   // いいねをトグルするハンドラー (いいねのON/OFFを切り替える)
   const handleLikeToggle = async () => {
+    // ユーザーがログインしていない場合、トグル不可
+    if (!user) {
+        alert(dict.authRequired); // ログイン必要アラート
+        return;
+    }
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        console.error(dict.tokenNotFound); // ✅ 翻訳されたメッセージを使用
+        console.error(dict.tokenNotFound); 
         return;
       }
       // いいねAPIを呼び出します。
@@ -296,30 +301,35 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーをコンソールに出力します。
         if (res.status === 401) {
-          console.error(dict.authErrorInvalidToken); // ✅ 翻訳されたメッセージを使用
+          console.error(dict.authErrorInvalidToken); 
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`${dict.failedToOperateLike}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
+        throw new Error(`${dict.failedToOperateLike}: ${res.statusText}`); 
       }
 
       const data = await res.json(); // レスポンスデータをJSONとしてパース
-      setIsLiked(data.isLiked);     // いいね状態を更新
+      setIsLiked(data.isLiked);      // いいね状態を更新
       setLikeCount((prev) => (data.isLiked ? prev + 1 : prev - 1)); // いいね数も更新
 
     } catch (err) {
       // エラーが発生した場合、コンソールとアラートにエラーを出力します。
-      console.error(dict.likeOperationError, err); // ✅ 翻訳されたメッセージを使用
-      alert(`${dict.errorOperatingLike}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
+      console.error(dict.likeOperationError, err); 
+      alert(`${dict.errorOperatingLike}: ${err instanceof Error ? err.message : dict.unknownError}`); 
     }
   };
 
   // 新しいコメントを送信するハンドラー
   const handleCommentSubmit = async (e: FormEvent) => {
     e.preventDefault(); // フォームのデフォルト送信を防ぎます。
+    // ユーザーがログインしていない場合はコメント投稿不可
+    if (!user) {
+        alert(dict.authRequired); // ログイン必要アラート
+        return;
+    }
     // コメント内容が空の場合、警告を表示して処理を中断します。
     if (!newCommentContent.trim()) {
-      alert(dict.commentCannotBeEmpty); // ✅ 翻訳されたメッセージを使用
+      alert(dict.commentCannotBeEmpty); 
       return;
     }
 
@@ -327,7 +337,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        console.error(dict.tokenNotFound); // ✅ 翻訳されたメッセージを使用
+        console.error(dict.tokenNotFound); 
         setCommentLoading(false);
         return;
       }
@@ -347,12 +357,12 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // 401 Unauthorized の場合、認証エラーをコンソールに出力します。
         if (res.status === 401) {
-          console.error(dict.authErrorInvalidToken); // ✅ 翻訳されたメッセージを使用
+          console.error(dict.authErrorInvalidToken); 
           setCommentLoading(false);
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`${dict.failedToPostComment}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
+        throw new Error(`${dict.failedToPostComment}: ${res.statusText}`); 
       }
 
       setNewCommentContent(""); // コメント入力フィールドをクリア
@@ -361,8 +371,8 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
     } catch (err) {
       // エラーが発生した場合、コンソールとアラートにエラーを出力します。
-      console.error(dict.commentPostError, err); // ✅ 翻訳されたメッセージを使用
-      alert(`${dict.errorPostingComment}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
+      console.error(dict.commentPostError, err); 
+      alert(`${dict.errorPostingComment}: ${err instanceof Error ? err.message : dict.unknownError}`); 
     } finally {
       setCommentLoading(false); // コメント送信ローディング状態を終了
     }
@@ -370,15 +380,20 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
   // ✅ コメント削除ハンドラー (本人が作成したコメントのみ削除可能)
   const handleCommentDelete = async (commentId: string) => {
+    // ユーザーがログインしていない場合はコメント削除不可
+    if (!user) {
+        alert(dict.authRequired); // ログイン必要アラート
+        return;
+    }
     // 削除確認のダイアログを表示します。
-    if (!confirm(dict.confirmDeleteComment)) { // ✅ 翻訳されたメッセージを使用
+    if (!confirm(dict.confirmDeleteComment)) { 
       return;
     }
 
     try {
       const token = getToken(); // トークンを取得
       if (!token) {
-        alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
+        alert(dict.authRequired); 
         return;
       }
 
@@ -393,206 +408,516 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       if (!res.ok) {
         // APIエラーの種類に応じた処理
         if (res.status === 401) {
-          alert(dict.authRequired); // ✅ 翻訳されたメッセージを使用
+          alert(dict.authRequired); 
           return;
         }
         if (res.status === 403) { // 権限なしエラー (Forbidden)
-          alert(dict.noPermissionToDeleteComment); // ✅ 翻訳されたメッセージを使用
+          alert(dict.noPermissionToDeleteComment); 
           return;
         }
         // その他のAPIエラーの場合、エラーをスローします。
-        throw new Error(`${dict.failedToDeleteComment}: ${res.statusText}`); // ✅ 翻訳されたメッセージを使用
+        throw new Error(`${dict.failedToDeleteComment}: ${res.statusText}`); 
       }
 
       // 削除成功時にコメントリストを更新
       await fetchComments();
-      alert(dict.commentDeletedSuccess); // ✅ 翻訳されたメッセージを使用
+      alert(dict.commentDeletedSuccess); 
 
     } catch (err) {
       // エラーが発生した場合、コンソールとアラートにエラーを出力します。
-      console.error(dict.commentDeleteError, err); // ✅ 翻訳されたメッセージを使用
-      alert(`${dict.errorDeletingComment}: ${err instanceof Error ? err.message : dict.unknownError}`); // ✅ 翻訳されたメッセージを使用
+      console.error(dict.commentDeleteError, err); 
+      alert(`${dict.errorDeletingComment}: ${err instanceof Error ? err.message : dict.unknownError}`); 
     }
   };
 
-  // ローディング中の表示
-  if (loading || authLoading) {
-    // ✅ ローディング画面にもダークモードクラスを適用します。
-    return (
-      <div className={`text-center py-8 min-h-screen flex items-center justify-center ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-        {dict.loading}...
-      </div>
-    );
-  }
-
-  // エラー発生時の表示
-  if (error) {
-    // ✅ エラー画面にもダークモードクラスを適用します。
-    return (
-      <div className={`text-center text-red-500 py-8 min-h-screen flex items-center justify-center ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-        {dict.error}: {error}
-      </div>
-    );
-  }
-
-  // 投稿が見つからない場合の表示
-  if (!post) {
-    // ✅ 投稿なし画面にもダークモードクラスを適用します。
-    return (
-      <div className={`text-center py-8 min-h-screen flex items-center justify-center ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-        {dict.postNotFound}
-      </div>
-    );
-  }
-
   // ✅ 現在のユーザーが投稿の作成者であるかを確認 (UIの再レンダリングを保証)
-  const isPostOwner = user && user.id === post.userId;
+  const isPostOwner = user && user.id === post?.userId; // postがnullの場合に備え、オプショナルチェイニングを適用
 
-  // コンポーネントのレンダリング
+ // ロード中表示
+ if (loading || authLoading) {
   return (
-    // ✅ 最上位のdivにダークモードクラスを適用: theme状態に応じて背景色とテキスト色を動的に変更します。
-    <div className={`container mx-auto p-4 min-h-screen ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`} key={userKey}>
-      {/* ✅ 言語切り替えボタンとダークモードトグルボタンを追加 */}
-      <div className="absolute top-4 right-4 z-10 flex items-center space-x-4">
-        <div className="inline-flex shadow rounded overflow-hidden">
-          <button
-            onClick={() => setLang("en")}
-            className={`px-3 py-1 font-medium ${
-              lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
-            }`}
-          >
-            EN
-          </button>
-          <button
-            onClick={() => setLang("ja")}
-            className={`px-3 py-1 font-medium ${
-              lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white"
-            }`}
-          >
-            JP
-          </button>
+    <div className={`min-h-screen transition-all duration-500 ${
+      theme === 'dark' 
+        ? 'dark bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900' 
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+    }`}>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className={`text-center p-8 rounded-3xl ${
+          theme === 'dark'
+            ? 'bg-gray-800/60 backdrop-blur-2xl border border-gray-700/30 text-white'
+            : 'bg-white/70 backdrop-blur-2xl border border-white/50 text-gray-900'
+        } shadow-2xl transform hover:scale-105 transition-all duration-300`}>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500/30 border-t-blue-500 mx-auto mb-6"></div>
+          <p className="text-xl font-semibold">{dict.loading}</p>
+          <p className="text-sm opacity-60 mt-2">しばらくお待ちください...</p>
         </div>
-        <ThemeToggleButton /> {/* ✅ ダークモードトグルボタンコンポーネント */}
       </div>
+    </div>
+  );
+}
 
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6"> {/* ✅ ダークモード背景色およびテキスト色 */}
-        <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">{post.title}</h1> {/* ✅ ダークモードテキスト色 */}
+// エラー発生時表示
+if (error) {
+  return (
+    <div className={`min-h-screen transition-all duration-500 ${
+      theme === 'dark' 
+        ? 'dark bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900' 
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+    }`}>
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className={`text-center p-8 rounded-3xl ${
+          theme === 'dark'
+            ? 'bg-red-900/60 backdrop-blur-2xl border border-red-700/30 text-red-200'
+            : 'bg-red-50/70 backdrop-blur-2xl border border-red-200/50 text-red-900'
+        } shadow-2xl max-w-md w-full transform hover:scale-105 transition-all duration-300`}>
+          <svg className="w-20 h-20 mx-auto mb-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="text-2xl font-bold mb-4">{dict.error}</h2>
+          <p className="mb-6 leading-relaxed opacity-90">{error}</p>
+          <Link
+            href="/blog"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-indigo-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {dict.backToPostList || 'Back to Posts'}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 投稿が見つからない場合に表示
+if (!post) {
+  return (
+    <div className={`min-h-screen transition-all duration-500 ${
+      theme === 'dark' 
+        ? 'dark bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900' 
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+    }`}>
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className={`text-center p-8 rounded-3xl ${
+          theme === 'dark'
+            ? 'bg-gray-800/60 backdrop-blur-2xl border border-gray-700/30 text-gray-200'
+            : 'bg-white/70 backdrop-blur-2xl border border-white/50 text-gray-900'
+        } shadow-2xl max-w-md w-full transform hover:scale-105 transition-all duration-300`}>
+          <svg className="w-20 h-20 mx-auto mb-6 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h2 className="text-2xl font-bold mb-4">{dict.postNotFound}</h2>
+          <p className="mb-6 opacity-70">リクエストされた投稿は見つかりませんでした。</p>
+          <Link
+            href="/blog"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-indigo-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {dict.backToPostList || 'Back to Posts'}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// コンポーネントのレンダリング
+return (
+  <div className={`min-h-screen transition-all duration-500 ${
+    theme === 'dark' 
+      ? 'dark bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900' 
+      : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+  }`} key={userKey}>
+    
+    {/* 上部ヘッダー: スティッキー、ブラー効果、言語/テーマトグル */}
+    <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10">
+      <div className={`${
+        theme === 'dark' ? 'bg-gray-900/80' : 'bg-white/80'
+      } transition-all duration-300`}>
+        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+          {/* 戻るリンク - 左上 */}
+          <Link 
+            href="/blog" 
+            className={`group flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            } transform hover:scale-105`}
+          >
+            <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>{dict.backToPostList}</span>
+          </Link>
+
+          {/* 言語切り替えとテーマトグルボタン - 右上 */}
+          <div className="flex items-center space-x-4">
+            <div className="inline-flex shadow-lg rounded-xl overflow-hidden">
+              <button
+                onClick={() => setLang("en")}
+                className={`px-4 py-2 font-medium transition-all duration-200 ${
+                  lang === "en" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLang("ja")}
+                className={`px-4 py-2 font-medium transition-all duration-200 ${
+                  lang === "ja" ? "bg-blue-600 text-white" : "bg-gray-200 text-black dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                JP
+              </button>
+            </div>
+            <ThemeToggleButton /> 
+          </div>
+        </div>
+      </div>
+    </header>
+
+    {/* メインコンテンツ領域 */}
+    <main className="max-w-4xl mx-auto px-6 py-12">
+      {/* 投稿詳細カード */}
+      <article className={`relative rounded-3xl p-8 mb-12 transition-all duration-300 ${
+        theme === 'dark'
+          ? 'bg-gray-800/40 backdrop-blur-2xl border border-gray-700/30'
+          : 'bg-white/70 backdrop-blur-2xl border border-white/50'
+      } shadow-xl hover:shadow-2xl transform hover:scale-[1.01]`}>
+        
+        {/* 投稿タイトル */}
+        <h1 className={`text-4xl sm:text-5xl font-extrabold mb-4 leading-tight ${
+          theme === 'dark' ? 'text-white' : 'text-gray-900'
+        }`}>
+          {post.title}
+        </h1>
+
+        {/* 投稿者情報と作成日 */}
+        <div className="flex items-center text-sm mb-6">
+          <span className={`font-semibold ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          }`}>
+            {post.username || dict.unknownUser}
+          </span>
+          <span className={`mx-2 ${
+            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          }`}>•</span>
+          <span className={`${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+          }`}>
+            {new Date(post.createdAt).toLocaleDateString('ja-JP', {
+              year: 'numeric', month: 'long', day: 'numeric'
+            })}
+          </span>
+        </div>
+
+        {/* 投稿画像 */}
         {post.imageUrl && (
-          <div className="mb-4">
+          <div className="mb-8 rounded-2xl overflow-hidden shadow-lg">
             <img
               src={post.imageUrl}
               alt={post.title}
-              className="w-full h-auto max-h-96 object-contain rounded-lg"
-              // 画像の読み込みエラーが発生した場合の処理
+              className="w-full h-auto max-h-[500px] object-cover object-center transition-all duration-300 hover:scale-105"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.onerror = null; // 無限ループを防ぐため、イベントハンドラーを削除
-                target.src = "/placeholder-image.png"; // 代替画像を表示
-                target.alt = dict.imageLoadError; // ✅ 翻訳されたメッセージを使用
+                target.onerror = null;
+                target.src = "/placeholder-image.png";
+                target.alt = dict.imageLoadError;
               }}
             />
           </div>
         )}
-        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed mb-6">{post.content}</p> {/* ✅ ダークモードテキスト色 */}
-        <div className="flex justify-between items-center text-sm text-gray-500 border-t pt-4 dark:border-gray-700"> {/* ✅ ダークモード境界線色 */}
-          <span className="dark:text-gray-400">{dict.author}: {post.username}</span> {/* ✅ ダークモードテキスト色 */}
-          <span className="dark:text-gray-400">{dict.postedOn}: {new Date(post.createdAt).toLocaleDateString()}</span> {/* ✅ ダークモードテキスト色 */}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={handleLikeToggle} // いいねトグルハンドラーを呼び出し
-              className={`flex items-center text-lg ${isLiked ? 'text-red-500' : 'text-gray-400'} hover:text-red-600 transition-colors`}
-              aria-label={isLiked ? dict.unlike : dict.like} // ✅ 翻訳されたメッセージを使用
-            >
-              ❤️ <span className="ml-1 text-sm">{likeCount}</span> {/* いいね数表示 */}
-            </button>
-            <span className="flex items-center text-lg text-gray-500">
-              💬 <span className="ml-1 text-sm">{comments.length}</span> {/* コメント数表示 */}
-            </span>
+
+        {/* 投稿内容 - 改善されたタイポグラフィ */}
+        <div className={`prose prose-lg max-w-none mb-8 ${ 
+          theme === 'dark' 
+            ? 'prose-invert text-gray-300 prose-headings:text-white prose-a:text-blue-400 prose-strong:text-white' 
+            : 'text-gray-700 prose-headings:text-gray-900 prose-a:text-blue-600 prose-strong:text-gray-800'
+        }`}>
+          <div className="whitespace-pre-wrap leading-relaxed text-base sm:text-lg">
+            {post.content}
           </div>
         </div>
 
-        {/* ✅ 投稿者のみ編集・削除ボタンを表示 - 強化された条件付きレンダリング */}
-        {isPostOwner && (
-          <div className="mt-6 flex space-x-4 justify-end">
-            <Link
-              href={`/blog/${id}/edit`}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-            >
-              {dict.edit} {/* ✅ 翻訳されたメッセージを使用 */}
-            </Link>
+        {/* アクションバー - いいね、コメント数、共有 */}
+        <div className="flex items-center justify-between pt-8 border-t border-gray-200/20 dark:border-gray-700/20">
+          
+          {/* 左側: インタラクションボタン */}
+          <div className="flex items-center gap-4 sm:gap-6">
+            
+            {/* いいねボタン - 改善されたアニメーション */}
             <button
-              onClick={handleDelete} // 削除ハンドラーを呼び出し
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              onClick={handleLikeToggle}
+              className={`group flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-full transition-all duration-300 ${
+                isLiked
+                  ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 shadow-lg shadow-red-500/20'
+                  : theme === 'dark'
+                    ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+                    : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+              } transform hover:scale-105`}
+              aria-label={isLiked ? dict.unlike : dict.like}
             >
-              {dict.delete} {/* ✅ 翻訳されたメッセージを使用 */}
+              <svg 
+                className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ${
+                  isLiked ? 'fill-current scale-110' : 'group-hover:scale-125'
+                }`} 
+                fill={isLiked ? "currentColor" : "none"} 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <span className="font-bold text-sm sm:text-lg">{likeCount}</span>
+            </button>
+            
+            {/* コメント数 - 改善されたスタイル */}
+            <div className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-full ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="font-bold text-sm sm:text-lg">{comments.length} {dict.comments}</span>
+            </div>
+
+            {/* 共有ボタン - 新規追加 */}
+            <button className={`p-2 sm:p-3 rounded-full transition-all duration-300 ${
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/10'
+                : 'text-gray-500 hover:text-blue-500 hover:bg-blue-50'
+            } transform hover:scale-105`}>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
             </button>
           </div>
-        )}
-      </div>
 
-      {/* コメントセクション */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"> {/* ✅ ダークモード背景色 */}
-        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">{dict.comments} ({comments.length})</h2> {/* ✅ ダークモードテキスト色 */}
+          {/* 右側: 投稿者専用アクションボタン */}
+          {isPostOwner && (
+            <div className="flex items-center gap-2 sm:gap-3">
+              
+              {/* 編集ボタン */}
+              <Link
+                href={`/blog/${id}/edit`}
+                className="group flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-indigo-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span className="hidden sm:inline">{dict.edit}</span> 
+              </Link>
+              
+              {/* 削除ボタン */}
+              <button
+                onClick={handleDelete}
+                className="group flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium rounded-xl hover:from-red-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="hidden sm:inline">{dict.delete}</span> 
+              </button>
+            </div>
+          )}
+        </div>
+      </article>
 
-        {/* 新しいコメント投稿フォーム */}
-        <form onSubmit={handleCommentSubmit} className="mb-6">
-          <textarea
-            value={newCommentContent} // コメント内容の状態にバインド
-            onChange={(e) => setNewCommentContent(e.target.value)} // 入力値の変更を更新
-            placeholder={dict.enterCommentPlaceholder} // ✅ 翻訳されたメッセージを使用
-            rows={3}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder-gray-500 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" // ✅ ダークモード入力フィールドスタイル
-            required // 必須入力
-            disabled={commentLoading} // コメント送信中は無効化
-          ></textarea>
-          <button
-            type="submit"
-            className="mt-3 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={commentLoading || !newCommentContent.trim()} // ローディング中または内容が空の場合はボタンを無効化
-          >
-            {commentLoading ? dict.sending : dict.postComment} {/* ✅ 翻訳されたメッセージを使用 */}
-          </button>
-        </form>
-
-        {/* コメントリスト */}
-        {commentLoading && comments.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400">{dict.loadingComments}...</div> // ✅ ダークモードテキスト色
-        ) : comments.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400">{dict.noCommentsYet}.</div> // ✅ ダークモードテキスト色
-        ) : (
-          <div className="space-y-4">
-            {comments.map((comment) => (
-              <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600"> {/* ✅ ダークモード背景色および境界線 */}
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold text-gray-800 dark:text-gray-100">{comment.user.name || dict.unknownUser}</span> {/* ✅ ダークモードテキスト色 */}
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(comment.createdAt).toLocaleDateString()} {new Date(comment.createdAt).toLocaleTimeString()}
-                  </span>
-                </div>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.content}</p> {/* ✅ ダークモードテキスト色 */}
-
-                {/* ✅ コメント削除ボタン - 本人のコメントのみ表示 - 強化された条件付きレンダリング */}
-                {user && user.id === comment.userId && (
-                  <div className="mt-2 text-right">
-                    <button
-                      onClick={() => handleCommentDelete(comment.id)} // コメント削除ハンドラーを呼び出し
-                      className="text-sm text-red-500 hover:text-red-700 hover:underline transition-colors px-2 py-1 border border-red-300 rounded dark:border-red-600" // ✅ ダークモード境界線およびボタン色
-                    >
-                      {dict.delete} {/* ✅ 翻訳されたメッセージを使用 */}
-                    </button>
-                  </div>
+      {/* コメント投稿フォーム */}
+      {user ? (
+        <div className={`rounded-2xl p-6 mb-8 transition-all duration-300 ${
+          theme === 'dark'
+            ? 'bg-gray-800/40 backdrop-blur-2xl border border-gray-700/30'
+            : 'bg-white/70 backdrop-blur-2xl border border-white/50'
+        } shadow-xl hover:shadow-2xl transform hover:scale-[1.005]`}>
+          
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+              <span className="text-white text-lg font-bold">
+                {user.name?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            </div>
+            <h3 className={`text-xl font-bold ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              {dict.addComment || 'Add a Comment'}
+            </h3>
+          </div>
+          
+          <form onSubmit={handleCommentSubmit}>
+            <div className="relative">
+              <textarea
+                value={newCommentContent}
+                onChange={(e) => setNewCommentContent(e.target.value)}
+                placeholder={dict.writeComment || 'Write your comment...'}
+                className={`w-full p-5 pr-16 rounded-xl border-2 resize-none transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 focus:bg-gray-700/70 focus:border-blue-500/50'
+                    : 'bg-white/80 border-gray-200/50 text-gray-900 placeholder-gray-500 focus:bg-white focus:border-blue-500/50'
+                } focus:outline-none focus:ring-4 focus:ring-blue-500/20`}
+                rows={4}
+                maxLength={500} 
+                disabled={commentLoading}
+              />
+              
+              {/* 送信ボタン - 改善されたデザイン */}
+              <button
+                type="submit"
+                disabled={commentLoading || !newCommentContent.trim()}
+                className={`absolute bottom-4 right-4 p-3 rounded-xl transition-all duration-200 ${
+                  commentLoading || !newCommentContent.trim()
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white transform hover:scale-110 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {commentLoading ? (
+                  <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
                 )}
+              </button>
+            </div>
+            
+            <div className="mt-4 flex justify-between items-center">
+              <p className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                {newCommentContent.length}/500 {dict.characters || 'characters'}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewCommentContent('')}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    theme === 'dark'
+                      ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className={`rounded-2xl p-8 text-center mb-8 transition-all duration-300 ${
+          theme === 'dark'
+            ? 'bg-gray-800/40 backdrop-blur-2xl border border-gray-700/30 text-gray-300'
+            : 'bg-white/70 backdrop-blur-2xl border border-white/50 text-gray-600'
+        } shadow-xl`}>
+          <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <h3 className="text-xl font-semibold mb-2">{dict.loginRequired || 'Login Required'}</h3>
+          <p className="mb-4">{dict.loginToComment || 'Please log in to comment.'}</p>
+          <Link
+            href="/login"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-indigo-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            {dict.loginButton || 'Login'}
+          </Link>
+        </div>
+      )}
+
+      {/* コメント一覧 */}
+      {comments.length > 0 && (
+        <div className={`rounded-2xl p-6 transition-all duration-300 ${
+          theme === 'dark'
+            ? 'bg-gray-800/40 backdrop-blur-2xl border border-gray-700/30'
+            : 'bg-white/70 backdrop-blur-2xl border border-white/50'
+        } shadow-xl hover:shadow-2xl`}>
+          
+          <div className="flex items-center gap-4 mb-8">
+            <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <h3 className={`text-2xl font-bold ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              {dict.comments} ({comments.length})
+            </h3>
+          </div>
+
+          <div className="space-y-6">
+            {comments.map((comment, index) => (
+              <div
+                key={comment.id}
+                className={`p-6 rounded-xl transition-all duration-300 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700/30 hover:bg-gray-700/50 border border-gray-600/20'
+                    : 'bg-gray-50/50 hover:bg-gray-50/80 border border-gray-200/30'
+                } transform hover:scale-[1.005] hover:shadow-lg animate-fade-in`} 
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                
+                {/* コメントヘッダー */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    
+                    {/* プロフィールアバター */}
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                      <span className="text-white text-lg font-bold">
+                        {comment.user.name?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <p className={`font-bold text-lg ${
+                        theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                      }`}>
+                        {comment.user.name || dict.unknownUser}
+                      </p>
+                      <p className={`text-sm flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {new Date(comment.createdAt).toLocaleDateString('ja-JP', {
+                            year: 'numeric', month: 'long', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* コメント投稿者である場合の削除ボタン */}
+                  {user && user.id === comment.userId && (
+                    <button
+                      onClick={() => handleCommentDelete(comment.id)}
+                      className={`group p-2 rounded-lg transition-all duration-200 ${
+                        theme === 'dark'
+                          ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+                          : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+                      } transform hover:scale-110`}
+                    >
+                      <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* コメント内容 */}
+                <div className={`leading-7 text-lg ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  <p className="whitespace-pre-wrap">{comment.content}</p>
+                </div>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </main>
 
-      <div className="mt-6 text-center">
-        <Link href="/blog" className="text-blue-500 hover:underline">
-          ← {dict.backToPostList} {/* ✅ 翻訳されたメッセージを使用 */}
-        </Link>
-      </div>
-    </div>
-  );
+    {/* 下部の余白 */}
+    <div className="h-16"></div>
+  </div>
+);
 }
