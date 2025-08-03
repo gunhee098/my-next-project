@@ -22,7 +22,7 @@ export default function PostForm() {
     console.log("📌 送信データ:", { title, content, category }); // 💡 콘솔 메시지 변경
 
     // ローカルストレージから認証トークンを取得
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     // トークンが存在しない場合、ユーザーにログインを促し処理を中断
     if (!token) {
       alert("ログインが必要です。"); // 

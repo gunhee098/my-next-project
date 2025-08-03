@@ -77,7 +77,7 @@ export default function BlogPage() {
 
       const url = `/api/posts?${queryParams.toString()}`;
 
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       const headers: HeadersInit = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -90,7 +90,7 @@ export default function BlogPage() {
 
       // 認証エラー処理
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         setIsLoggedIn(false);
         setUserId(null);
         setUserEmail(null);
@@ -113,7 +113,7 @@ export default function BlogPage() {
 
   // 認証状態を確認するエフェクト
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
     if (token) {
       try {
@@ -122,7 +122,7 @@ export default function BlogPage() {
 
         if (decoded.exp < currentTime) {
           console.warn("トークンが期限切れです。ログアウト処理を実行します。");
-          localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
           setIsLoggedIn(false);
           setUserId(null);
           setUserEmail(null);
@@ -138,7 +138,7 @@ export default function BlogPage() {
         setIsInitialized(true);
       } catch (err) {
         console.error("トークンのデコードまたは検証エラー:", err);
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         setIsLoggedIn(false);
         setUserId(null);
         setUserEmail(null);
@@ -188,7 +188,7 @@ export default function BlogPage() {
     if (!confirm(dict.confirmDelete)) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
         router.push("/");
         return;
@@ -203,7 +203,7 @@ export default function BlogPage() {
 
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
           router.push("/");
           return;
         }
@@ -219,7 +219,7 @@ export default function BlogPage() {
 
   // ログアウトを処理
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     setIsLoggedIn(false);
     setUserId(null);
     setUserEmail(null);
@@ -255,7 +255,7 @@ export default function BlogPage() {
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
         alert("ログインセッションがありません。再度ログインしてください。");
         router.push('/');
@@ -273,7 +273,7 @@ export default function BlogPage() {
 
       if (res.status === 401 || res.status === 403) {
         alert("セッションが期限切れか、権限がありません。再度ログインしてください。");
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         router.push('/');
         return;
       }

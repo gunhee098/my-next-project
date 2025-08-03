@@ -112,7 +112,7 @@ export default function NewPostPage() {
       }
 
       // JWTトークンをローカルストレージから取得
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       // トークンが存在しない場合、エラーをスロー (多言語対応メッセージを使用)
       if (!token) throw new Error(dict.needLogin);
 

@@ -44,7 +44,7 @@ export default function LoginPage() {
       const data = await res.json(); // サーバーからのJSONレスポンスを解析します。
 
       if (res.ok) {
-        localStorage.setItem("token", data.token); // 認証トークンをローカルストレージに保存します。
+        sessionStorage.setItem("token", data.token); // 認証トークンをローカルストレージに保存します。
         router.push("/blog"); // ログイン成功後、ブログページへリダイレクトします。
       } else {
         alert(data.error || dict.loginFail); // ログイン失敗メッセージを表示します。

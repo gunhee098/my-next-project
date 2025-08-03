@@ -33,7 +33,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // windowオブジェクトが存在する場合（クライアントサイド）のみ実行
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme'); // ローカルストレージから保存されたテーマを取得
+      const savedTheme = sessionStorage.getItem('theme'); // ローカルストレージから保存されたテーマを取得
       // 保存されたテーマがない場合、または不正な値の場合、システムのカラーテーマ設定を優先
       const initialTheme: 'light' | 'dark' =
         savedTheme === 'light' || savedTheme === 'dark'
@@ -58,7 +58,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       } else {
         root.classList.remove('dark'); // ライトモードの場合`dark`クラスを削除
       }
-      localStorage.setItem('theme', theme); // 現在のテーマをローカルストレージに保存
+      sessionStorage.setItem('theme', theme); // 現在のテーマをローカルストレージに保存
     }
   }, [theme]); // themeの状態が変更されるたびに実行
 

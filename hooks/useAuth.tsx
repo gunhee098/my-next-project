@@ -27,17 +27,17 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // localStorage を安全に使用するためのヘルパー関数群 (サーバーサイドレンダリングとの互換性のため)
 const getToken = (): string | null => {
   if (typeof window === 'undefined') return null; // window オブジェクトがない場合 (SSR時) は null を返す
-  return localStorage.getItem('token');
+  return sessionStorage.getItem("token") || localStorage.getItem("token");
 };
 
 const setToken = (token: string): void => {
   if (typeof window === 'undefined') return; // window オブジェクトがない場合 (SSR時) は何もしない
-  localStorage.setItem('token', token);
+  sessionStorage.setItem('token', token);
 };
 
 const removeToken = (): void => {
   if (typeof window === 'undefined') return; // window オブジェクトがない場合 (SSR時) は何もしない
-  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
 };
 
 /**

@@ -55,7 +55,7 @@ interface PostDetailPageProps {
 const getToken = (): string | null => {
   // サーバーサイドレンダリング時には window オブジェクトがないため、チェックが必要です。
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
+  return sessionStorage.getItem("token") || localStorage.getItem("token");
 };
 
 /**

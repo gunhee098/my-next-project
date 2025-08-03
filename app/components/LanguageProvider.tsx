@@ -26,7 +26,7 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
   // コンポーネントのマウント時に一度だけ実行されるエフェクトフック
   // ローカルストレージから保存された言語設定を読み込み、stateを初期化します。
   useEffect(() => {
-    const storedLang = localStorage.getItem("lang"); // ローカルストレージから"lang"キーの値を取得
+    const storedLang = sessionStorage.getItem("lang"); // ローカルストレージから"lang"キーの値を取得
     if (storedLang) {
       setLang(storedLang); // 保存された言語があればstateに設定
     }

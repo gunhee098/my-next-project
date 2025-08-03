@@ -194,7 +194,7 @@ export default function EditPost() {
       }
 
       // JWTトークンをローカルストレージから取得
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
         throw new Error(dict.needLogin);
       }

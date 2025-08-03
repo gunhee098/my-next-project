@@ -27,7 +27,6 @@ export function middleware(req: NextRequest) {
     token = authHeader.split(" ")[1]; // "Bearer " の後に続く部分をトークンとして取得
   } else {
     // Authorizationヘッダーがない場合、クッキーも確認します (JWTトークンをクッキーに保存する構成の場合)。
-    // 現在のフロントエンドは localStorage を使用していますが、万一の場合に備えた防御ロジックです。
     token = req.cookies.get("token")?.value || null;
   }
 
