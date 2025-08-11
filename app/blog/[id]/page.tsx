@@ -14,7 +14,7 @@ import ja from "@/locales/ja.json"; // ✅ 日本語のロケールデータを�
 import { useTheme } from "@/components/ThemeProvider"; // テーマプロバイダーからuseThemeフックをインポートします。
 // ✅ ThemeToggleButtonコンポーネントをインポートします。
 import ThemeToggleButton from "@/components/ThemeToggleButton";
-
+import ShareButton from "@/components/ShareButton";
 
 // 投稿データの型定義
 interface Post {
@@ -684,15 +684,8 @@ return (
             </div>
 
             {/* 共有ボタン - 新規追加 */}
-            <button className={`p-2 sm:p-3 rounded-full transition-all duration-300 ${
-              theme === 'dark'
-                ? 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/10'
-                : 'text-gray-500 hover:text-blue-500 hover:bg-blue-50'
-            } transform hover:scale-105`}>
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-              </svg>
-            </button>
+            {post && <ShareButton post={post} theme={theme} />}
+
           </div>
 
           {/* 右側: 投稿者専用アクションボタン */}

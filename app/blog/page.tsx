@@ -240,7 +240,8 @@ export default function BlogPage() {
     const diff = now.getTime() - date.getTime();
 
     if (diff < 1000 * 60 * 60 * 24) {
-      return formatDistanceToNow(date, { addSuffix: true, locale: ja });
+      const locale = lang === 'ja' ? ja : undefined; 
+    return formatDistanceToNow(date, { addSuffix: true, locale });
     }
 
     return format(date, "yyyy.MM.dd");
