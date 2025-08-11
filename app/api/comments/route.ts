@@ -2,17 +2,13 @@
 
 // Next.js のサーバーサイドAPIルートのためのNextResponseとNextRequestをインポートします。
 import { NextResponse, NextRequest } from 'next/server';
-// PrismaClient および Prisma 固有のエラータイプをインポートします。
-import { PrismaClient, Prisma } from '@prisma/client';
 // PrismaClientKnownRequestErrorは、特定のPrismaデータベースエラーを捕捉するために使用します。
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-
+import { prisma } from '@/lib/prisma'; 
 // ユーザー認証のためのヘルパー関数をインポートします。
 import { authenticateUser } from '@/lib/auth';
 
 // PrismaClientのインスタンスを作成します。これによりデータベース操作が可能になります。
-const prisma = new PrismaClient();
-
 /**
  * POSTハンドラー: 新しいコメントを作成するAPIエンドポイント
  * @param {NextRequest} req - 受信したNext.jsのリクエストオブジェクト
@@ -62,10 +58,7 @@ export async function POST(req: NextRequest) {
     console.error("🚨 コメント作成中に予期せぬエラーが発生しました:", error);
     // その他のエラーの場合、一般的なサーバーエラーを返します。
     return NextResponse.json({ error: 'サーバーエラーが発生しました。' }, { status: 500 });
-  } finally {
-    // リクエスト処理の最後にデータベース接続を必ず切断します。
-    await prisma.$disconnect();
-  }
+  } 
 }
 
 /**
@@ -129,18 +122,6 @@ export async function GET(req: NextRequest) {
     console.error("🚨 コメント取得中に予期せぬエラーが発生しました:", error);
     // その他のエラーの場合、一般的なサーバーエラーを返します。
     return NextResponse.json({ error: 'サーバーエラーが発生しました。' }, { status: 500 });
-  } finally {
-    // データベース接続を必ず切断します。
-    await prisma.$disconnect();
-  }
+  } 
 }
 
-// DELETE ハンドラー: コメントを削除する (将来的な追加の可能性)
-// export async function DELETE(req: NextRequest) {
-//   // ... コメント削除ロジック
-// }
-
-// PUT/PATCH ハンドラー: コメントを更新する (将来的な追加の可能性)
-// export async function PATCH(req: NextRequest) {
-//   // ... コメント更新ロジック
-// }

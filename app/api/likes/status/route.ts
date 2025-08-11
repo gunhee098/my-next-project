@@ -3,12 +3,9 @@
 // Next.jsのAPIルートのためのモジュールをインポートします。
 import { NextResponse, NextRequest } from 'next/server';
 // Prisma ORMクライアントをインポートします。
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 // ユーザー認証のためのヘルパー関数をインポートします。
 import { authenticateUser } from '@/lib/auth';
-
-// PrismaClientのインスタンスを作成します。
-const prisma = new PrismaClient();
 
 /**
  * GETリクエストハンドラ: いいね状態の取得
@@ -73,8 +70,5 @@ export async function GET(request: NextRequest) {
     console.error('いいね状態の取得エラー:', error);
     // サーバーエラーレスポンスを返します。
     return NextResponse.json({ message: 'いいね状態の取得に失敗しました。' }, { status: 500 });
-  } finally {
-    // Prismaクライアントの接続を切断します。
-    await prisma.$disconnect();
-  }
+  } 
 }

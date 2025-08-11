@@ -153,7 +153,7 @@ export default function LoginPage() {
         }`}>
           {dict.noAccountPrompt}{" "}
           <a
-            href="/register" // 💡 修正: /auth/register から /register へパス変更
+            href="/register" 
             className={`font-bold hover:underline ${
               theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'
             }`}

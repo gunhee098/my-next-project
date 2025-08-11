@@ -2,15 +2,11 @@
 
 // Next.jsのAPIルートのためのモジュールをインポートします。
 import { NextResponse, NextRequest } from 'next/server';
-// Prisma ORMクライアントをインポートします。
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 // ユーザー認証のためのヘルパー関数をインポートします。
 import { authenticateUser } from '@/lib/auth';
 // Next.jsのキャッシュを再検証するための関数をインポートします。
 import { revalidatePath } from 'next/cache';
-
-// PrismaClientのインスタンスを作成します。
-const prisma = new PrismaClient();
 
 /**
  * PUTリクエストハンドラ: コメント修正
@@ -77,10 +73,7 @@ export async function PUT(
     console.error('コメント更新エラー (PUT):', error);
     // サーバーエラーレスポンスを返します。
     return NextResponse.json({ message: 'コメントの更新に失敗しました。' }, { status: 500 });
-  } finally {
-    // Prismaクライアントの接続を切断します。
-    await prisma.$disconnect();
-  }
+  } 
 }
 
 /**
@@ -150,8 +143,5 @@ export async function DELETE(
     console.error('コメント削除エラー (DELETE):', error);
     // サーバーエラーレスポンスを返します。
     return NextResponse.json({ message: 'コメントの削除に失敗しました。' }, { status: 500 });
-  } finally {
-    // Prismaクライアントの接続を切断します。
-    await prisma.$disconnect();
   }
 }

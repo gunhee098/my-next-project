@@ -150,9 +150,5 @@ export async function POST(req: Request) {
     // [最終的なサーバーエラーハンドリング]
     console.error("🚨 サーバーエラーが発生しました:", error);
     return NextResponse.json({ error: "サーバーエラーが発生しました！" }, { status: 500 });
-  } finally {
-    // [Prismaクライアントの接続解除]
-    // 各リクエスト処理後にデータベース接続を解除（Lambdaなどのサーバーレス環境で特に重要）
-    await prisma.$disconnect();
-  }
+    } 
 }

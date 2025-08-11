@@ -1,7 +1,6 @@
 // 📂 app/api/posts/route.ts
 
-// PrismaClient および Prisma タイプをインポートします。
-import { PrismaClient, Prisma } from '@prisma/client';
+
 // PrismaClientKnownRequestError は、Prisma 固有のエラーを処理するために使用されます。
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 // Next.js のサーバーサイドAPIルートのためのNextResponseとNextRequestをインポートします。
@@ -9,9 +8,9 @@ import { NextResponse, NextRequest } from 'next/server';
 
 // ユーザー認証のためのヘルパー関数をインポートします。
 import { authenticateUser } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
-// PrismaClientのインスタンスを作成します。これによりデータベース操作が可能になります。
-const prisma = new PrismaClient();
 
 // 投稿結果のデータ構造を定義するインターフェースです。
 interface PostResult {
@@ -181,10 +180,7 @@ export async function GET(request: NextRequest) {
     }
     // 予期せぬエラーの場合。
     return NextResponse.json({ error: "予期せぬエラーが発生しました、投稿の取得に失敗しました。" }, { status: 500 }); // 500 Internal Server Error
-  } finally {
-    // データベース接続を必ず切断します。
-    await prisma.$disconnect();
-  }
+  } 
 }
 
 // POST /api/posts ハンドラー (新しい投稿作成機能)
@@ -230,8 +226,5 @@ export async function POST(req: NextRequest) {
     console.error("🚨 投稿作成中に予期せぬエラーが発生しました:", error); // その他の予期せぬエラーのログ
     // その他のエラーの場合。
     return NextResponse.json({ error: 'サーバーエラーが発生しました。' }, { status: 500 });
-  } finally {
-    // データベース接続を必ず切断します。
-    await prisma.$disconnect();
-  }
+  } 
 }
