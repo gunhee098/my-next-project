@@ -351,63 +351,66 @@ export default function BlogPage() {
         />
       )}
 
-      {/* サイドバー - モバイル対応 */}
-      <aside className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 ${
-        theme === 'dark'
-          ? 'bg-gray-900/95 backdrop-blur-xl border-r border-gray-700/50'
-          : 'bg-white/95 backdrop-blur-xl border-r border-gray-200/50'
-      } ${
-        // モバイルでは条件付き表示、デスクトップでは常に表示
-        isMobileMenuOpen 
-          ? 'w-64 transform translate-x-0' 
-          : 'w-64 transform -translate-x-full md:translate-x-0'
-      }`}>
-        <div className="p-4 md:p-6 h-full flex flex-col">
-          
-          {/* タイトル */}
-          <div className="mb-6 md:mb-8 mt-12 md:mt-0">
-            <h1 className={`text-xl md:text-2xl font-bold bg-gradient-to-r ${
-              theme === 'dark'
-                ? 'from-blue-400 to-purple-400'
-                : 'from-blue-600 to-purple-600'
-            } bg-clip-text text-transparent`}>
-              Blog Posts
-            </h1>
-          </div>
-
-          {/* ユーザー情報 */}
-          {isLoggedIn && userName && (
-            <div className={`mb-4 md:mb-6 p-3 md:p-4 rounded-2xl ${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border border-gray-700/30'
-                : 'bg-white/60 border border-gray-200/30'
-            }`}>
-              <p className={`text-xs md:text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-              }`}>
-                {dict.welcome}
-              </p>
-              <p className={`text-base md:text-lg font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {userName}さん！
-              </p>
+        {/* サイドバー - モバイル対応 */}
+        <aside className={`fixed left-0 top-0 h-full transition-all duration-300 ${
+          theme === 'dark'
+            ? 'bg-gray-900/95 backdrop-blur-xl border-r border-gray-700/50'
+            : 'bg-white/95 backdrop-blur-xl border-r border-gray-200/50'
+        } ${
+          // モバイルでは条件付き表示、デスクトップでは常時表示 + z-index修正
+          isMobileMenuOpen 
+            ? 'w-64 transform translate-x-0 z-50' 
+            : 'w-64 transform -translate-x-full md:translate-x-0 z-30'
+        }`}>
+          <div className="p-4 md:p-6 h-full flex flex-col">
+            
+            {/* タイトル */}
+            <div className="mb-6 md:mb-8 mt-12 md:mt-0">
+              <h1 className={`text-xl md:text-2xl font-bold bg-gradient-to-r ${
+                theme === 'dark'
+                  ? 'from-blue-400 to-purple-400'
+                  : 'from-blue-600 to-purple-600'
+              } bg-clip-text text-transparent`}>
+                Blog Posts
+              </h1>
             </div>
-          )}
 
-          {/* ログアウトボタン */}
-          {isLoggedIn && (
-            <button
-              onClick={handleLogout}
-              className="w-full px-3 md:px-4 py-2 md:py-3 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm md:text-base font-medium hover:from-red-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              {dict.logout}
-            </button>
-          )}
-        </div>
-      </aside>
+            {/* ユーザー情報 */}
+            {isLoggedIn && userName && (
+              <div className={`mb-4 md:mb-6 p-3 md:p-4 rounded-2xl ${
+                theme === 'dark'
+                  ? 'bg-gray-800/50 border border-gray-700/30'
+                  : 'bg-white/60 border border-gray-200/30'
+              }`}>
+                <p className={`text-xs md:text-sm font-medium ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                }`}>
+                  {dict.welcome}
+                </p>
+                <p className={`text-base md:text-lg font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {userName}さん！
+                </p>
+              </div>
+            )}
 
-      {/* メインコンテンツ領域 - モバイル対応 */}
+            {/* ログアウトボタン - タッチ問題解決 */}
+            {isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="relative w-full px-3 md:px-4 py-2 md:py-3 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm md:text-base font-medium hover:from-red-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation z-10"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
+              >
+                {dict.logout}
+              </button>
+            )}
+          </div>
+        </aside>      
+        {/* メインコンテンツ領域 - モバイル対応 */}
       <div className="md:ml-64 min-h-screen">
         
         {/* ヘッダー: 言語選択とテーマトグル - モバイル対応 */}
